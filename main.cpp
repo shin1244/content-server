@@ -1,22 +1,6 @@
 #include <iostream>
-#include <winsock2.h>
 #include <thread>
-#pragma comment(lib, "ws2_32.lib")
-
-HANDLE g_iocp;
-
-void Accepter(SOCKET s) {
-	while (true)
-	{
-		sockaddr_in clientAddr = {};
-		int addrLen = sizeof(clientAddr);
-		SOCKET clientSocket = accept(s, reinterpret_cast<sockaddr*>(&clientAddr), &addrLen);
-		if (clientSocket == INVALID_SOCKET) {
-			std::cout << "accept failed: " << WSAGetLastError() << "\n";
-			continue;
-		}
-	}
-}
+#include "NetworkCore.h"
 
 int main()
 {
