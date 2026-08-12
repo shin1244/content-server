@@ -1,16 +1,24 @@
 #pragma once
 #include <winsock2.h>
+#include "RingBuffer.h"
+
 
 class Session
 {
-	SOCKET socket_ = INVALID_SOCKET;
+public:
+    void Init(SOCKET socket);
+    void Close();
+    void postRecv();
 
-	RingBuffer recvBuffer_;
-	RingBuffer sendBuffer_;
+private:
+    SOCKET socket_ = INVALID_SOCKET;
 
-	OVERLAPPED recvOverlapped_;
-	OVERLAPPED sendOverlapped_;
-	WSABUF recvWsaBuf_;
-	WSABUF sendWsaBuf_;
+    RingBuffer recvBuffer_;
+    RingBuffer sendBuffer_;
+
+    WSABUF recvWsaBuf_{};
+    WSABUF sendWsaBuf_{};
+
+    OVERLAPPED recvOverlapped_;
+    OVERLAPPED sendOverlapped_;
 };
-

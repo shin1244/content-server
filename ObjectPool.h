@@ -1,0 +1,27 @@
+#pragma once
+#include <stack>
+#include <mutex>
+
+template <typename T, int N>
+class ObjectPool {
+private:
+    T items[N];
+    std::stack<int> freeList;
+    std::mutex lock;
+public:
+    ObjectPool() { for (int i = N - 1; i >= 0; --i) freeList.push(i); }
+
+    int Alloc() {
+        std::lock_guard<std::mutex> g(lock);
+        if (freeList.empty()) return -1;
+        int i = freeList.top(); freeList.pop();
+        return i;
+    }
+    void Free(int i) {
+        std::lock_guard<std::mutex> g(lock);
+        freeList.push(i);
+    }
+    T& operator[](int i) { return items[i]; }
+    T* begin() { return items; }
+    T* end() { return items + N; }
+};

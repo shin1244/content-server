@@ -80,6 +80,23 @@ void NetworkCore::AccepterLoop()
             break;
         }
         std::cout << "client connected\n";
+
+        int index = sessions_.Alloc();
+        if (index == -1)
+        {
+            closesocket(clientSocket);
+            continue;
+        }
+        Session* session = &sessions_[index];
+
+        session->Init(clientSocket);
+        CreateIoCompletionPort(
+            reinterpret_cast<HANDLE>(clientSocket),
+            iocp_,
+            reinterpret_cast<ULONG_PTR>(session),
+            0
+        );
+        session->postRecv();
     }
 }
 
@@ -93,5 +110,6 @@ void NetworkCore::WorkerLoop()
         BOOL ok = GetQueuedCompletionStatus(iocp_, &bytes, &key, &overlapped, INFINITE);
 
         if (key == 0 && overlapped == nullptr) break;
+        return;
     }
 }
