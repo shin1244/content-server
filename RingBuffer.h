@@ -1,5 +1,4 @@
 #pragma once
-#include <cstring>
 
 class RingBuffer {
 private:
@@ -17,9 +16,9 @@ public:
     char* GetHead();
     char* GetTail();
 
-    void OnRead(int bytes);
-    void OnWrite(int bytes);
-    void Peek(char* dest, int len);
+    void moveHead(int bytes);
+    void moveTail(int bytes);
+    void Peek(void* dest, int len);
     bool Write(const char* data, int len);
     void Clear();
 };

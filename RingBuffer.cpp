@@ -1,5 +1,7 @@
 #include "RingBuffer.h"
 
+#include <cstring>
+
 int RingBuffer::GetUsedSize()
 {
 	return (tail_ - head_ + BUFFER_SIZE) % BUFFER_SIZE;
@@ -36,17 +38,17 @@ char* RingBuffer::GetTail()
 	return &buffer_[tail_];
 }
 
-void RingBuffer::OnRead(int bytes)
+void RingBuffer::moveHead(int bytes)
 {
 	head_ = (head_ + bytes) % BUFFER_SIZE;
 }
 
-void RingBuffer::OnWrite(int bytes)
+void RingBuffer::moveTail(int bytes)
 {
 	tail_ = (tail_ + bytes) % BUFFER_SIZE;
 }
 
-void RingBuffer::Peek(char* dest, int len)
+void RingBuffer::Peek(void* dest, int len)
 {
 	if (GetUsedSize() < len) return;
 	if (tail_ >= head_)

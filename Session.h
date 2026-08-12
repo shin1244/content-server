@@ -1,6 +1,7 @@
 #pragma once
 #include <winsock2.h>
 #include "RingBuffer.h"
+#include "Protocol.h"
 
 
 class Session
@@ -8,7 +9,10 @@ class Session
 public:
     void Init(SOCKET socket);
     void Close();
-    void postRecv();
+    void PostRecv();
+    OVERLAPPED* GetrecvOverlapped() { return &recvOverlapped_; }
+    OVERLAPPED* GetsendOverlapped() { return &sendOverlapped_; }
+    void OnRecvBytes(int bytes);
 
 private:
     SOCKET socket_ = INVALID_SOCKET;

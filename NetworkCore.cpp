@@ -96,7 +96,7 @@ void NetworkCore::AccepterLoop()
             reinterpret_cast<ULONG_PTR>(session),
             0
         );
-        session->postRecv();
+        session->PostRecv();
     }
 }
 
@@ -109,7 +109,23 @@ void NetworkCore::WorkerLoop()
 
         BOOL ok = GetQueuedCompletionStatus(iocp_, &bytes, &key, &overlapped, INFINITE);
 
-        if (key == 0 && overlapped == nullptr) break;
-        return;
+        Session* session = reinterpret_cast<Session*>(key);
+
+        if (!ok)
+        {
+            session->Close();
+            continue;
+        }
+
+        if (overlapped == session->GetrecvOverlapped())
+        {
+	        if (bytes == 0)
+	        {
+                session->Close();
+                continue;
+	        }
+            session->OnRecvBytes(bytes);
+            session->PostRecv();
+        }
     }
 }

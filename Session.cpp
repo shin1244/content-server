@@ -13,7 +13,7 @@ void Session::Close()
     closesocket(socket_);
 }
 
-void Session::postRecv()
+void Session::PostRecv()
 {
     int freeSize = recvBuffer_.GetLinearEmptySize();
     if (freeSize <= 0) return;
@@ -34,4 +34,19 @@ void Session::postRecv()
         &recvOverlapped_,
         nullptr
     );
+}
+
+void Session::OnRecvBytes(int bytes)
+{
+    recvBuffer_.moveTail(bytes);
+    while (true)
+    {
+        if (recvBuffer_.GetUsedSize() < HEADER_SIZE) break;
+        PacketHeader header;
+        recvBuffer_.Peek(&header, HEADER_SIZE);
+        if (recvBuffer_.GetUsedSize() < header.size) break;
+        char packet[4096];
+        recvBuffer_.Peek(packet, header.size);
+        recvBuffer_.moveHead(header.size);
+    }
 }
