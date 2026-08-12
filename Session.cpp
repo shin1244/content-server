@@ -36,7 +36,7 @@ void Session::PostRecv()
     );
 }
 
-void Session::OnRecvBytes(int bytes)
+void Session::OnRecv(int bytes)
 {
     recvBuffer_.moveTail(bytes);
     while (true)
@@ -49,4 +49,10 @@ void Session::OnRecvBytes(int bytes)
         recvBuffer_.Peek(packet, header.size);
         recvBuffer_.moveHead(header.size);
     }
+    PostRecv();
+}
+
+void Session::OnSend(int bytes)
+{
+    sendBuffer_.moveHead(bytes);
 }

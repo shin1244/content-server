@@ -124,8 +124,10 @@ void NetworkCore::WorkerLoop()
                 session->Close();
                 continue;
 	        }
-            session->OnRecvBytes(bytes);
-            session->PostRecv();
+            session->OnRecv(bytes);
+        } else if (overlapped == session->GetsendOverlapped())
+        {
+            session->OnSend(bytes);
         }
     }
 }
