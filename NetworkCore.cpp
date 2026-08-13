@@ -9,9 +9,11 @@ bool NetworkCore::Start(uint16_t port)
     }
     if (!InitSocket(port)) return false;
     if (!LoadExtensionFns()) return false;
-    PrepareAccepts();
     if (!InitIOCP())       return false;
+    CreateIoCompletionPort((HANDLE)listenSocket_, iocp_, 0, 0);
+    PrepareAccepts();
     SpawnWorkers();
+
     return true;
 }
 
@@ -143,6 +145,7 @@ void NetworkCore::WorkerLoop()
     }
 }
 
+// 확장 함수인 AcceptEx의 실제 함수 주소를 가져와서 fnAcceptEx_에 저장하는 함수
 bool NetworkCore::LoadExtensionFns()
 {
     GUID guid = WSAID_ACCEPTEX;

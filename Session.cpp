@@ -4,7 +4,8 @@ void Session::Init(SOCKET socket, int index)
 {
     socket_ = socket;
     index_ = index;
-
+    closing_.store(false);
+    pendingIO_.store(0);
     recvBuffer_.Clear();
     sendBuffer_.Clear();
 }
@@ -63,6 +64,11 @@ void Session::OnRecv(int bytes)
 
         PacketHeader header;
         recvBuffer_.Peek(&header, HEADER_SIZE);
+        if (header.size < HEADER_SIZE || header.size > 4096)
+        {
+            Close(); 
+            break;
+        }
 
         if (recvBuffer_.GetUsedSize() < header.size) break;
 
