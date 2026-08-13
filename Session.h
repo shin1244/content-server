@@ -10,16 +10,22 @@ class Session
 public:
     void Init(SOCKET socket, int index);
     void Close();
+
     void PostRecv();
     void OnRecv(int bytes);
+
+    void PostSend();
     void OnSend(int bytes);
+    void Send(const char* data, int len);
+
     bool CompleteIO();
     int GetIndex() { return index_; }
 
 
 private:
-    std::atomic<int> pendingIO_{ 0 };
-    std::atomic<bool> closing_{ false };
+    std::atomic<int> pendingIO_{ 0 }; // IO중 참조 카운트
+    std::atomic<bool> closing_{ false }; // 종료 예약
+    std::atomic<bool> sending_{ false }; // 이미 보내는 중인지 체크
 
     SOCKET socket_ = INVALID_SOCKET;
     int index_ = -1;

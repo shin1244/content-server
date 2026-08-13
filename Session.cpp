@@ -66,7 +66,7 @@ void Session::OnRecv(int bytes)
         recvBuffer_.Peek(&header, HEADER_SIZE);
         if (header.size < HEADER_SIZE || header.size > 4096)
         {
-            Close(); 
+            Close();
             break;
         }
 
@@ -80,9 +80,60 @@ void Session::OnRecv(int bytes)
     PostRecv();
 }
 
+void Session::PostSend()
+{
+    if (closing_) return;
+    if (sendBuffer_.GetUsedSize() == 0) { sending_ = false; return; }
+
+    sendWsaBuf_.buf = sendBuffer_.GetHead();
+    sendWsaBuf_.len = sendBuffer_.GetLinearUsedSize();
+
+    DWORD flags = 0;
+    DWORD bytesSent = 0;
+
+    ZeroMemory(&sendContext_.overlapped, sizeof(WSAOVERLAPPED));
+    ++pendingIO_;
+
+    int ret = WSASend(
+        socket_,
+        &sendWsaBuf_,
+        1,
+        &bytesSent,
+        flags,
+        &sendContext_.overlapped,
+        nullptr
+    );
+
+    if (ret == SOCKET_ERROR)
+    {
+        int errCode = WSAGetLastError();
+
+        if (errCode != WSA_IO_PENDING)
+        {
+            --pendingIO_;
+            Close();
+        }
+    }
+}
+
 void Session::OnSend(int bytes)
 {
     sendBuffer_.moveHead(bytes);
+    if (sendBuffer_.GetUsedSize() != 0) { PostSend(); }
+    else { sending_ = false; }
+}
+
+void Session::Send(const char* data, int len)
+{
+    if (sendBuffer_.GetEmptySize() < len) return;
+    sendBuffer_.Write(data, len);
+    sendBuffer_.moveTail(len);
+
+    if (!sending_)
+    {
+        sending_ = true;
+        PostSend();
+    }
 }
 
 bool Session::CompleteIO()
