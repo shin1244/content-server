@@ -6,6 +6,7 @@ void Session::Init(SOCKET socket, int index)
     index_ = index;
     closing_.store(false);
     pendingIO_.store(0);
+    sending_.store(false);
     recvBuffer_.Clear();
     sendBuffer_.Clear();
 }
@@ -64,7 +65,7 @@ void Session::OnRecv(int bytes)
 
         PacketHeader header;
         recvBuffer_.Peek(&header, HEADER_SIZE);
-        if (header.size < HEADER_SIZE || header.size > 4096)
+        if (header.size < HEADER_SIZE || header.size > 4095)
         {
             Close();
             break;
@@ -120,8 +121,8 @@ void Session::Send(const char* data, int len)
 {
     std::lock_guard<std::mutex> g(sendLock_);
     if (sendBuffer_.GetEmptySize() < len) return;
-    sendBuffer_.Write(data, len);
-    sendBuffer_.moveTail(len);
+    if (!sendBuffer_.Write(data, len)) return;
+	sendBuffer_.moveTail(len);
     if (!sending_) { sending_ = true; PostSend(); }
 }
 

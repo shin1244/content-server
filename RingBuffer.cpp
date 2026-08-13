@@ -81,6 +81,8 @@ bool RingBuffer::Write(const char* data, int len)
 		memcpy(&buffer_[tail_], data, rightSize);
 		memcpy(&buffer_[0], data + rightSize, len - rightSize);
 	}
+
+	return true;
 }
 
 void RingBuffer::Clear()
