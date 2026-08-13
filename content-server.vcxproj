@@ -129,6 +129,7 @@
     <ClCompile Include="Session.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="NetTypes.h" />
     <ClInclude Include="NetworkCore.h" />
     <ClInclude Include="ObjectPool.h" />
     <ClInclude Include="Protocol.h" />

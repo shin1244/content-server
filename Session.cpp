@@ -18,12 +18,13 @@ void Session::PostRecv()
     int freeSize = recvBuffer_.GetLinearEmptySize();
     if (freeSize <= 0) return;
 
-    ZeroMemory(&recvOverlapped_, sizeof(recvOverlapped_));
     recvWsaBuf_.buf = recvBuffer_.GetTail();
     recvWsaBuf_.len = freeSize;
 
     DWORD flags = 0;
     DWORD byteRecv = 0;
+
+    ZeroMemory(&recvContext_.overlapped, sizeof(WSAOVERLAPPED));
 
     int ret = WSARecv(
         socket_,
@@ -31,9 +32,18 @@ void Session::PostRecv()
         1,
         &byteRecv,
         &flags,
-        &recvOverlapped_,
+        &recvContext_.overlapped,
         nullptr
     );
+
+    if (ret == SOCKET_ERROR)
+    {
+        int errCode = WSAGetLastError();
+        if (errCode != WSA_IO_PENDING)
+        {
+            Close();
+        }
+    }
 }
 
 void Session::OnRecv(int bytes)

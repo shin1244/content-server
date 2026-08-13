@@ -3,6 +3,7 @@
 #include <winsock2.h>
 #include <thread>
 #include <vector>
+#include <mswsock.h> 
 #include "ObjectPool.h"
 #include "Session.h"
 #pragma comment(lib, "ws2_32.lib")
@@ -17,11 +18,18 @@ private:
     bool InitSocket(uint16_t port); 
     bool InitIOCP();
     void SpawnWorkers();
-    void AccepterLoop();             
-    void WorkerLoop();               
+    void PrepareAccepts();
+    void WorkerLoop();     
+    bool LoadExtensionFns();
+
+    std::vector<AcceptContext> acceptContexts_;
+
+    bool PostAccept(AcceptContext* ctx);
+    void OnAcceptComplete(AcceptContext* ctx);
 
     SOCKET listenSocket_ = INVALID_SOCKET;
     HANDLE iocp_ = nullptr;
     ObjectPool<Session, 1000> sessions_; // 최대 1000명 동시 접속
+    LPFN_ACCEPTEX fnAcceptEx_ = nullptr;
     std::vector<std::thread> workers_;
 };

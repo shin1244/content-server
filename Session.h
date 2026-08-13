@@ -1,7 +1,7 @@
 #pragma once
-#include <winsock2.h>
 #include "RingBuffer.h"
 #include "Protocol.h"
+#include "NetTypes.h"
 
 
 class Session
@@ -12,8 +12,7 @@ public:
     void PostRecv();
     void OnRecv(int bytes);
     void OnSend(int bytes);
-    OVERLAPPED* GetrecvOverlapped() { return &recvOverlapped_; }
-    OVERLAPPED* GetsendOverlapped() { return &sendOverlapped_; }
+    OVERLAPPED* GetOverlapped() { return &overlapped_; }
 
 
 private:
@@ -25,6 +24,6 @@ private:
     WSABUF recvWsaBuf_{};
     WSABUF sendWsaBuf_{};
 
-    OVERLAPPED recvOverlapped_;
-    OVERLAPPED sendOverlapped_;
+    RecvContext recvContext_;
+    SendContext sendContext_;
 };

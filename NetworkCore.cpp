@@ -8,24 +8,27 @@ bool NetworkCore::Start(uint16_t port)
         return false;
     }
     if (!InitSocket(port)) return false;
+    if (!LoadExtensionFns()) return false;
+    PrepareAccepts();
     if (!InitIOCP())       return false;
     SpawnWorkers();
-    workers_.emplace_back([this] { AccepterLoop(); });
-    std::cout << "server started on port " << port << "\n";
     return true;
 }
 
 void NetworkCore::Stop()
 {
-	if (listenSocket_ != INVALID_SOCKET) {
-		closesocket(listenSocket_);
-		listenSocket_ = INVALID_SOCKET;
-	}
-	if (iocp_ != nullptr) {
-		CloseHandle(iocp_);
-		iocp_ = nullptr;
-	}
-	WSACleanup();
+    size_t workerCount = workers_.size();
+    for (size_t i = 1; i < workerCount; ++i) {
+        PostQueuedCompletionStatus(iocp_, 0, 0, nullptr);
+    }
+
+    for (auto& t : workers_) {
+        if (t.joinable()) t.join();
+    }
+
+    closesocket(listenSocket_);
+    CloseHandle(iocp_);
+    WSACleanup();
 }
 
 bool NetworkCore::InitSocket(uint16_t port)
@@ -68,35 +71,11 @@ void NetworkCore::SpawnWorkers()
     std::cout << "spawned " << n << " worker threads\n";
 }
 
-void NetworkCore::AccepterLoop()
+void NetworkCore::PrepareAccepts()
 {
-    while (true) {
-        sockaddr_in clientAddr = {};
-        int addrLen = sizeof(clientAddr);
-        SOCKET clientSocket = accept(listenSocket_,
-            reinterpret_cast<sockaddr*>(&clientAddr), &addrLen);
-        if (clientSocket == INVALID_SOCKET) {
-            std::cout << "accept ended: " << WSAGetLastError() << "\n";
-            break;
-        }
-        std::cout << "client connected\n";
-
-        int index = sessions_.Alloc();
-        if (index == -1)
-        {
-            closesocket(clientSocket);
-            continue;
-        }
-        Session* session = &sessions_[index];
-
-        session->Init(clientSocket);
-        CreateIoCompletionPort(
-            reinterpret_cast<HANDLE>(clientSocket),
-            iocp_,
-            reinterpret_cast<ULONG_PTR>(session),
-            0
-        );
-        session->PostRecv();
+    acceptContexts_.resize(8);
+    for (int i = 0; i < 8; ++i) {
+        PostAccept(&acceptContexts_[i]);
     }
 }
 
@@ -108,16 +87,34 @@ void NetworkCore::WorkerLoop()
         OVERLAPPED* overlapped = nullptr;
 
         BOOL ok = GetQueuedCompletionStatus(iocp_, &bytes, &key, &overlapped, INFINITE);
+        
+    	if (overlapped == nullptr)
+            break;
+
+        OverlappedEx* overlappedEx = reinterpret_cast<OverlappedEx*>(overlapped);
+
+        if (overlappedEx->ioType == IoType::Accept)
+        {
+            AcceptContext* acceptCtx = static_cast<AcceptContext*>(overlappedEx);
+            if (!ok) {
+                closesocket(acceptCtx->clientSocket);
+                PostAccept(acceptCtx);
+                continue;
+            }
+            OnAcceptComplete(acceptCtx);
+            continue;
+        }
 
         Session* session = reinterpret_cast<Session*>(key);
-
+        if (session == nullptr)
+            continue;
         if (!ok)
         {
             session->Close();
             continue;
         }
 
-        if (overlapped == session->GetrecvOverlapped())
+        if (overlappedEx->ioType == IoType::Recv)
         {
 	        if (bytes == 0)
 	        {
@@ -125,9 +122,84 @@ void NetworkCore::WorkerLoop()
                 continue;
 	        }
             session->OnRecv(bytes);
-        } else if (overlapped == session->GetsendOverlapped())
+        }
+        else if (overlappedEx->ioType == IoType::Send)
         {
             session->OnSend(bytes);
         }
     }
+}
+
+bool NetworkCore::LoadExtensionFns()
+{
+    GUID guid = WSAID_ACCEPTEX;
+    DWORD bytes = 0;
+
+    int ret = WSAIoctl(
+        listenSocket_,
+        SIO_GET_EXTENSION_FUNCTION_POINTER,
+        &guid, sizeof(guid),
+        &fnAcceptEx_, sizeof(fnAcceptEx_),
+        &bytes, nullptr, nullptr
+        );
+    if (ret == SOCKET_ERROR)
+    {
+        std::cout << "WSAIoctl AcceptEx failed: " << WSAGetLastError() << "\n";
+        return false;
+    }
+    return true;
+}
+
+bool NetworkCore::PostAccept(AcceptContext* ctx)
+{
+    ZeroMemory(&ctx->overlapped, sizeof(OVERLAPPED));
+    ctx->clientSocket = WSASocket(
+        AF_INET, SOCK_STREAM, IPPROTO_TCP,
+        nullptr, 0, WSA_FLAG_OVERLAPPED);
+    if (ctx->clientSocket == INVALID_SOCKET) {
+        std::cout << "WSASocket failed: " << WSAGetLastError() << "\n";
+        return false;
+    }
+
+    DWORD bytes = 0;
+    BOOL ret = fnAcceptEx_(
+        listenSocket_,
+        ctx->clientSocket,
+        ctx->buf,
+        0,
+        sizeof(sockaddr_in) + 16,
+        sizeof(sockaddr_in) + 16,
+        &bytes,
+        &ctx->overlapped
+    );
+
+    if (!ret && WSAGetLastError() != ERROR_IO_PENDING) {
+        closesocket(ctx->clientSocket);
+        ctx->clientSocket = INVALID_SOCKET;
+        return false;
+    }
+    return true;
+}
+
+void NetworkCore::OnAcceptComplete(AcceptContext* ctx)
+{
+    SOCKET clientSocket = ctx->clientSocket;
+
+    setsockopt(clientSocket, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
+        (char*)&listenSocket_, sizeof(listenSocket_));
+
+    int index = sessions_.Alloc();
+    if (index == -1) {
+        closesocket(clientSocket);
+        PostAccept(ctx);
+        return;
+    }
+    Session* session = &sessions_[index];
+    session->Init(clientSocket);
+
+    CreateIoCompletionPort((HANDLE)clientSocket, iocp_,
+        (ULONG_PTR)session, 0);
+    session->PostRecv();
+
+    PostAccept(ctx);
 }
