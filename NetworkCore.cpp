@@ -18,7 +18,7 @@ bool NetworkCore::Start(uint16_t port)
 void NetworkCore::Stop()
 {
     size_t workerCount = workers_.size();
-    for (size_t i = 1; i < workerCount; ++i) {
+    for (size_t i = 0; i < workerCount; ++i) {
         PostQueuedCompletionStatus(iocp_, 0, 0, nullptr);
     }
 
@@ -111,21 +111,34 @@ void NetworkCore::WorkerLoop()
         if (!ok)
         {
             session->Close();
+
+            if (session->CompleteIO())
+                sessions_.Free(session->GetIndex());
+
             continue;
         }
 
         if (overlappedEx->ioType == IoType::Recv)
         {
-	        if (bytes == 0)
-	        {
+            if (bytes == 0)
+            {
                 session->Close();
+
+                if (session->CompleteIO())
+                    sessions_.Free(session->GetIndex());
+
                 continue;
-	        }
+            }
             session->OnRecv(bytes);
         }
         else if (overlappedEx->ioType == IoType::Send)
         {
             session->OnSend(bytes);
+        }
+
+        if (session->CompleteIO())
+        {
+            sessions_.Free(session->GetIndex());
         }
     }
 }
@@ -195,7 +208,7 @@ void NetworkCore::OnAcceptComplete(AcceptContext* ctx)
         return;
     }
     Session* session = &sessions_[index];
-    session->Init(clientSocket);
+    session->Init(clientSocket, index);
 
     CreateIoCompletionPort((HANDLE)clientSocket, iocp_,
         (ULONG_PTR)session, 0);
