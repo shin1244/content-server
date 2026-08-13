@@ -116,24 +116,21 @@ void Session::PostSend()
     }
 }
 
-void Session::OnSend(int bytes)
-{
-    sendBuffer_.moveHead(bytes);
-    if (sendBuffer_.GetUsedSize() != 0) { PostSend(); }
-    else { sending_ = false; }
-}
-
 void Session::Send(const char* data, int len)
 {
+    std::lock_guard<std::mutex> g(sendLock_);
     if (sendBuffer_.GetEmptySize() < len) return;
     sendBuffer_.Write(data, len);
     sendBuffer_.moveTail(len);
+    if (!sending_) { sending_ = true; PostSend(); }
+}
 
-    if (!sending_)
-    {
-        sending_ = true;
-        PostSend();
-    }
+void Session::OnSend(int bytes)
+{
+    std::lock_guard<std::mutex> g(sendLock_);
+    sendBuffer_.moveHead(bytes);
+    if (sendBuffer_.GetUsedSize() != 0) PostSend();
+    else sending_ = false;
 }
 
 bool Session::CompleteIO()

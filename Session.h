@@ -1,5 +1,7 @@
 #pragma once
 #include <atomic>
+#include <mutex>
+
 #include "RingBuffer.h"
 #include "Protocol.h"
 #include "NetTypes.h"
@@ -26,6 +28,7 @@ private:
     std::atomic<int> pendingIO_{ 0 }; // IO중 참조 카운트
     std::atomic<bool> closing_{ false }; // 종료 예약
     std::atomic<bool> sending_{ false }; // 이미 보내는 중인지 체크
+    std::mutex sendLock_;
 
     SOCKET socket_ = INVALID_SOCKET;
     int index_ = -1;
