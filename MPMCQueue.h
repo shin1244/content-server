@@ -9,7 +9,7 @@ public:
     void Push(T value)
     {
         {
-            std::lock_guard<std::mutex> lock(mutex_);
+            std::lock_guard lock(mutex_);
             queue_.push(std::move(value));
         }
 
@@ -18,7 +18,7 @@ public:
 
     bool Pop(T& out)
     {
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::unique_lock lock(mutex_);
 
         cv_.wait(lock, [this] {
             return !queue_.empty() || stopping_;
@@ -36,7 +36,7 @@ public:
     void Stop()
     {
         {
-            std::lock_guard<std::mutex> lock(mutex_);
+            std::lock_guard lock(mutex_);
             stopping_ = true;
         }
 

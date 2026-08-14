@@ -65,7 +65,7 @@ void Session::OnRecv(int bytes)
 
         PacketHeader header;
         recvBuffer_.Peek(reinterpret_cast<char*>(&header), HEADER_SIZE);
-        if (header.size < HEADER_SIZE || header.size > 4095)
+        if (header.size < HEADER_SIZE || header.size > sizeof(Packet))  // 260
         {
             Close();
             break;
@@ -73,9 +73,8 @@ void Session::OnRecv(int bytes)
 
         if (recvBuffer_.GetUsedSize() < header.size) break;
 
-        char packet[4096];
-        recvBuffer_.Peek(packet, header.size);
-
+        Packet pkt;
+        recvBuffer_.Peek(reinterpret_cast<char*>(&pkt), header.size);   // Packet¿¡ Á÷Á¢
         recvBuffer_.moveHead(header.size);
     }
     PostRecv();
