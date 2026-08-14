@@ -6,6 +6,7 @@
 #include <mswsock.h> 
 #include "ObjectPool.h"
 #include "Session.h"
+#include "SessionManager.h"
 #pragma comment(lib, "ws2_32.lib")
 
 class NetworkCore {
@@ -26,10 +27,12 @@ private:
 
     bool PostAccept(AcceptContext* ctx);
     void OnAcceptComplete(AcceptContext* ctx);
+    void CloseSession(Session* session);
 
     SOCKET listenSocket_ = INVALID_SOCKET;
     HANDLE iocp_ = nullptr;
     ObjectPool<Session, 1000> sessions_; // 최대 1000명 동시 접속
+    SessionManager sessionMgr_;
     LPFN_ACCEPTEX fnAcceptEx_ = nullptr;
     std::vector<std::thread> workers_;
 };

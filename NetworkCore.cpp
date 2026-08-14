@@ -104,7 +104,6 @@ void NetworkCore::WorkerLoop()
                 continue;
             }
             OnAcceptComplete(acceptCtx);
-            std::cout << "come!\n";
             continue;
         }
 
@@ -116,7 +115,7 @@ void NetworkCore::WorkerLoop()
             session->Close();
 
             if (session->CompleteIO())
-                sessions_.Free(session->GetIndex());
+                CloseSession(session);
 
             continue;
         }
@@ -128,7 +127,7 @@ void NetworkCore::WorkerLoop()
                 session->Close();
 
                 if (session->CompleteIO())
-                    sessions_.Free(session->GetIndex());
+                    CloseSession(session);
 
                 continue;
             }
@@ -141,7 +140,7 @@ void NetworkCore::WorkerLoop()
 
         if (session->CompleteIO())
         {
-            sessions_.Free(session->GetIndex());
+            CloseSession(session);
         }
     }
 }
@@ -214,9 +213,17 @@ void NetworkCore::OnAcceptComplete(AcceptContext* ctx)
     Session* session = &sessions_[index];
     session->Init(clientSocket, index);
 
+    sessionMgr_.Add(session);
+
     CreateIoCompletionPort((HANDLE)clientSocket, iocp_,
         (ULONG_PTR)session, 0);
     session->PostRecv();
 
     PostAccept(ctx);
+}
+
+void NetworkCore::CloseSession(Session* session)
+{
+    sessionMgr_.Remove(session);
+    sessions_.Free(session->GetIndex());
 }

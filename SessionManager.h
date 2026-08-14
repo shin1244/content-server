@@ -9,7 +9,7 @@ private:
     std::shared_mutex lock_;
     std::unordered_map<uint64_t, Session*> byId_;
     //std::unordered_map<std::string, uint64_t> byName_; 
-    std::atomic<uint64_t> nextId_;
+    std::atomic<uint64_t> nextId_{0};
 public:
     void Add(Session* s);
     void Remove(Session* s);
