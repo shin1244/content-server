@@ -5,7 +5,7 @@
 template <typename T, int N>
 class ObjectPool {
 private:
-    T items[N];
+    std::vector<T> items;
     std::stack<int> freeList;
     std::mutex lock;
 public:

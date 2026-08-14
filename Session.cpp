@@ -64,7 +64,7 @@ void Session::OnRecv(int bytes)
         if (recvBuffer_.GetUsedSize() < HEADER_SIZE) break;
 
         PacketHeader header;
-        recvBuffer_.Peek(&header, HEADER_SIZE);
+        recvBuffer_.Peek(reinterpret_cast<char*>(&header), HEADER_SIZE);
         if (header.size < HEADER_SIZE || header.size > 4095)
         {
             Close();

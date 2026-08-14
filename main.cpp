@@ -4,4 +4,7 @@
 
 int main()
 {
+	NetworkCore core;
+	core.Start(5050);
+	while (true){}
 }

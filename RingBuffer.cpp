@@ -48,7 +48,7 @@ void RingBuffer::moveTail(int bytes)
 	tail_ = (tail_ + bytes) % BUFFER_SIZE;
 }
 
-void RingBuffer::Peek(void* dest, int len)
+void RingBuffer::Peek(char* dest, int len)
 {
 	if (GetUsedSize() < len) return;
 	if (tail_ >= head_)

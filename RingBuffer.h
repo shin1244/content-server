@@ -18,7 +18,7 @@ public:
 
     void moveHead(int bytes);
     void moveTail(int bytes);
-    void Peek(void* dest, int len);
+    void Peek(char* dest, int len);
     bool Write(const char* data, int len);
     void Clear();
 };
