@@ -119,7 +119,7 @@ void Session::PostSend()
 
 void Session::Send(const char* data, int len)
 {
-    std::lock_guard<std::mutex> g(sendLock_);
+    std::lock_guard g(sendLock_);
     if (sendBuffer_.GetEmptySize() < len) return;
     if (!sendBuffer_.Write(data, len)) return;
 	sendBuffer_.moveTail(len);
@@ -128,7 +128,7 @@ void Session::Send(const char* data, int len)
 
 void Session::OnSend(int bytes)
 {
-    std::lock_guard<std::mutex> g(sendLock_);
+    std::lock_guard g(sendLock_);
     sendBuffer_.moveHead(bytes);
     if (sendBuffer_.GetUsedSize() != 0) PostSend();
     else sending_ = false;

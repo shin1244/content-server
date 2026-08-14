@@ -19,9 +19,12 @@ public:
     void PostSend();
     void OnSend(int bytes);
     void Send(const char* data, int len);
-
+    
     bool CompleteIO();
     int GetIndex() { return index_; }
+
+    void SetId(uint64_t id) { id_ = id; }
+    uint64_t GetId() { return id_; }
 
 
 private:
@@ -32,6 +35,7 @@ private:
 
     SOCKET socket_ = INVALID_SOCKET;
     int index_ = -1;
+    uint64_t id_ = -1;
 
     RingBuffer recvBuffer_;
     RingBuffer sendBuffer_;
