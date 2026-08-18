@@ -5,12 +5,13 @@
 #include "RingBuffer.h"
 #include "Protocol.h"
 #include "NetTypes.h"
+#include "IPacketHandler.h"
 
 
 class Session
 {
 public:
-    void Init(SOCKET socket, int index);
+    void Init(SOCKET socket, int index, IPacketHandler* h);
     void Close();
 
     void PostRecv();
@@ -45,4 +46,6 @@ private:
 
     RecvContext recvContext_;
     SendContext sendContext_;
+
+    IPacketHandler* handler_ = nullptr;
 };

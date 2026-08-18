@@ -1,6 +1,6 @@
 #include "Session.h"
 
-void Session::Init(SOCKET socket, int index)
+void Session::Init(SOCKET socket, int index, IPacketHandler* h)
 {
     socket_ = socket;
     index_ = index;
@@ -9,6 +9,7 @@ void Session::Init(SOCKET socket, int index)
     sending_.store(false);
     recvBuffer_.Clear();
     sendBuffer_.Clear();
+    handler_ = h;
 }
 
 void Session::Close()
@@ -76,6 +77,8 @@ void Session::OnRecv(int bytes)
         Packet pkt;
         recvBuffer_.Peek(reinterpret_cast<char*>(&pkt), header.size);   // Packet¿¡ Á÷Á¢
         recvBuffer_.moveHead(header.size);
+
+        handler_->OnPacket(id_, pkt);
     }
     PostRecv();
 }

@@ -134,11 +134,13 @@
     <ClCompile Include="SessionManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="IPacketHandler.h" />
     <ClInclude Include="MPMCQueue.h" />
     <ClInclude Include="NetTypes.h" />
     <ClInclude Include="NetworkCore.h" />
     <ClInclude Include="ObjectPool.h" />
     <ClInclude Include="Protocol.h" />
+    <ClInclude Include="QueueSink.h" />
     <ClInclude Include="RingBuffer.h" />
     <ClInclude Include="Session.h" />
     <ClInclude Include="SessionManager.h" />

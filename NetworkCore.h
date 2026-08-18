@@ -5,16 +5,16 @@
 #include <vector>
 #include <mswsock.h> 
 
-#include "MPMCQueue.h"
 #include "ObjectPool.h"
 #include "Session.h"
 #include "SessionManager.h"
+#include "IPacketHandler.h"
 #pragma comment(lib, "ws2_32.lib")
 
 class NetworkCore {
 public:
     ~NetworkCore() { Stop(); }
-    bool Start(uint16_t port, MPMCQueue<RecvEvent>* recvQueue);
+    bool Start(uint16_t port, IPacketHandler* h);
     void Stop();
 
 private:
@@ -38,5 +38,5 @@ private:
     LPFN_ACCEPTEX fnAcceptEx_ = nullptr;
     std::vector<std::thread> workers_;
 
-    MPMCQueue<RecvEvent>* recvQueue_ = nullptr;
+    IPacketHandler* ph_ = nullptr;
 };
