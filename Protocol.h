@@ -9,4 +9,10 @@ struct Packet
 	PacketHeader header;
 	char message[256];
 };
+
+struct RecvEvent
+{
+	uint64_t sessionId; 
+	Packet   packet;
+};
 #pragma pack(pop)

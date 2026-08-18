@@ -4,6 +4,8 @@
 #include <thread>
 #include <vector>
 #include <mswsock.h> 
+
+#include "MPMCQueue.h"
 #include "ObjectPool.h"
 #include "Session.h"
 #include "SessionManager.h"
@@ -12,7 +14,7 @@
 class NetworkCore {
 public:
     ~NetworkCore() { Stop(); }
-    bool Start(uint16_t port);
+    bool Start(uint16_t port, MPMCQueue<RecvEvent>* recvQueue);
     void Stop();
 
 private:
@@ -35,4 +37,6 @@ private:
     SessionManager sessionMgr_;
     LPFN_ACCEPTEX fnAcceptEx_ = nullptr;
     std::vector<std::thread> workers_;
+
+    MPMCQueue<RecvEvent>* recvQueue_ = nullptr;
 };

@@ -1,12 +1,13 @@
 #include "NetworkCore.h"
 
-bool NetworkCore::Start(uint16_t port)
+bool NetworkCore::Start(uint16_t port, MPMCQueue<RecvEvent>* recvQueue)
 {
     WSADATA wsa;
     if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
         std::cout << "WSAStartup failed\n";
         return false;
     }
+    recvQueue_ = recvQueue;
     if (!InitSocket(port)) return false;
     if (!LoadExtensionFns()) return false;
     if (!InitIOCP())       return false;
