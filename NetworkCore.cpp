@@ -212,7 +212,7 @@ void NetworkCore::OnAcceptComplete(AcceptContext* ctx)
         return;
     }
     Session* session = &sessions_[index];
-    session->Init(clientSocket, index);
+    session->Init(clientSocket, index, ph_);
 
     sessionMgr_.Add(session);
 

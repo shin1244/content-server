@@ -11,5 +11,15 @@ int main()
 	QueueSink q(&recvQueue);
 	NetworkCore core;
 	core.Start(5050, &q);
-	while (true){}
+
+    std::thread consumer([&] {
+        RecvEvent evt;
+        while (recvQueue.Pop(evt)) {
+            evt.packet.header.id = static_cast<unsigned short>(evt.sessionId);
+            int len = evt.packet.header.size;
+            core.Broadcast(reinterpret_cast<char*>(&evt.packet), len);
+        }
+        });
+
+    consumer.join();
 }

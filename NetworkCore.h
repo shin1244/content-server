@@ -16,6 +16,7 @@ public:
     ~NetworkCore() { Stop(); }
     bool Start(uint16_t port, IPacketHandler* h);
     void Stop();
+    void Broadcast(char* data, int len) { sessionMgr_.Broadcast(data, len); }
 
 private:
     bool InitSocket(uint16_t port); 
