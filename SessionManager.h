@@ -14,4 +14,5 @@ public:
     void Add(Session* s);
     void Remove(Session* s);
     void Broadcast(char* data, int len);
+    bool SendTo(uint64_t id, const char* data, int len);
 };

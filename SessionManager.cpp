@@ -21,3 +21,12 @@ void SessionManager::Broadcast(char* data, int len)
 		s->Send(data, len);
 	}
 }
+
+bool SessionManager::SendTo(uint64_t id, const char* data, int len)
+{
+	std::shared_lock g(lock_);
+	auto it = byId_.find(id);
+	if (it == byId_.end()) return false;
+	it->second->Send(data, len);
+	return true;
+}

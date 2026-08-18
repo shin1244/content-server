@@ -17,6 +17,7 @@ public:
     bool Start(uint16_t port, IPacketHandler* h);
     void Stop();
     void Broadcast(char* data, int len) { sessionMgr_.Broadcast(data, len); }
+    bool SendTo(uint64_t id, const char* data, int len) { return sessionMgr_.SendTo(id, data, len); }
 
 private:
     bool InitSocket(uint16_t port); 

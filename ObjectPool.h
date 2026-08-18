@@ -20,7 +20,7 @@ public:
     }
 
     int Alloc() {
-        std::lock_guard<std::mutex> g(lock);
+        std::lock_guard g(lock);
 
         if (freeList.empty())
             return -1;
@@ -32,7 +32,7 @@ public:
     }
 
     void Free(int i) {
-        std::lock_guard<std::mutex> g(lock);
+        std::lock_guard g(lock);
         freeList.push(i);
     }
 

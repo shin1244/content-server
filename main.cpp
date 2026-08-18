@@ -4,20 +4,20 @@
 #include "MPMCQueue.h"
 #include "NetworkCore.h"
 #include "QueueSink.h"
+#include "PacketHandler.h"
 
 int main()
 {
-	MPMCQueue<RecvEvent> recvQueue;
-	QueueSink q(&recvQueue);
+	MPMCQueue<Packet> queue;
+	QueueSink q(&queue);
 	NetworkCore core;
+    PacketHandler h(&core);
 	core.Start(5050, &q);
 
     std::thread consumer([&] {
-        RecvEvent evt;
-        while (recvQueue.Pop(evt)) {
-            evt.packet.header.id = static_cast<unsigned short>(evt.sessionId);
-            int len = evt.packet.header.size;
-            core.Broadcast(reinterpret_cast<char*>(&evt.packet), len);
+        Packet pkt;
+        while (queue.Pop(pkt)) {
+            h.Handle(pkt);
         }
         });
 

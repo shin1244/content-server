@@ -5,11 +5,11 @@
 
 class QueueSink : public IPacketHandler {
 public:
-    QueueSink(MPMCQueue<RecvEvent>* q) : queue_(q) {}
+    QueueSink(MPMCQueue<Packet>* q) : queue_(q) {}
 
-    void OnPacket(uint64_t sessionId, const Packet& pkt) override {
-        queue_->Push({ sessionId, pkt });
+    void OnPacket(const Packet& pkt) override {
+        queue_->Push(pkt);
     }
 private:
-    MPMCQueue<RecvEvent>* queue_;
+    MPMCQueue<Packet>* queue_;
 };

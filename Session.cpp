@@ -77,8 +77,9 @@ void Session::OnRecv(int bytes)
         Packet pkt;
         recvBuffer_.Peek(reinterpret_cast<char*>(&pkt), header.size);   // Packet¿¡ Á÷Á¢
         recvBuffer_.moveHead(header.size);
+        pkt.header.id = id_;
 
-        handler_->OnPacket(id_, pkt);
+        handler_->OnPacket(pkt);
     }
     PostRecv();
 }

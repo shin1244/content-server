@@ -129,6 +129,7 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="NetworkCore.cpp" />
+    <ClCompile Include="PacketHandler.cpp" />
     <ClCompile Include="RingBuffer.cpp" />
     <ClCompile Include="Session.cpp" />
     <ClCompile Include="SessionManager.cpp" />
@@ -139,6 +140,7 @@
     <ClInclude Include="NetTypes.h" />
     <ClInclude Include="NetworkCore.h" />
     <ClInclude Include="ObjectPool.h" />
+    <ClInclude Include="PacketHandler.h" />
     <ClInclude Include="Protocol.h" />
     <ClInclude Include="QueueSink.h" />
     <ClInclude Include="RingBuffer.h" />
