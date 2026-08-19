@@ -11,12 +11,12 @@ struct Packet
 };
 #pragma pack(pop)
 
-inline Packet MakePacket(unsigned short senderId, const std::string& msg)
+inline Packet MakePacket(unsigned short id, const std::string& msg)
 {
     Packet pkt{};
     int copyLen = std::min<int>(msg.size(), sizeof(pkt.message));
     std::memcpy(pkt.message, msg.data(), copyLen);
-    pkt.header.id = senderId;
+    pkt.header.id = id;
     pkt.header.size = static_cast<unsigned short>(HEADER_SIZE + copyLen);
     return pkt;
 }

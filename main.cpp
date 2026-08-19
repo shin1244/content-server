@@ -1,10 +1,8 @@
-#include <iostream>
-#include <thread>
-
 #include "MPMCQueue.h"
 #include "NetworkCore.h"
 #include "QueueSink.h"
 #include "PacketHandler.h"
+#include "Consumer.h"
 
 int main()
 {
@@ -12,14 +10,14 @@ int main()
 	QueueSink q(&queue);
 	NetworkCore core;
     PacketHandler h(&core);
+	Consumer consumer(&queue, &h);
+
+
 	core.Start(5050, &q);
+	consumer.Start();
 
-    std::thread consumer([&] {
-        Packet pkt;
-        while (queue.Pop(pkt)) {
-            h.Handle(pkt);
-        }
-        });
+	while (true) {}
 
-    consumer.join();
+	consumer.Stop();
+	core.Stop();
 }

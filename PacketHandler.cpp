@@ -21,7 +21,7 @@ void PacketHandler::Handle(Packet& pkt)
         std::string msg;
         std::getline(iss, msg);
         Packet out = MakePacket(pkt.header.id, msg);
-        net_->SendTo(targetId, reinterpret_cast<const char*>(&out), out.header.size);
-        net_->SendTo(pkt.header.id, reinterpret_cast<const char*>(&out), out.header.size);
+        if (net_->SendTo(targetId, reinterpret_cast<const char*>(&out), out.header.size))
+			net_->SendTo(pkt.header.id, reinterpret_cast<const char*>(&out), out.header.size);
     }
 }

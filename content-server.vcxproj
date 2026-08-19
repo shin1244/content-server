@@ -127,6 +127,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Consumer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="NetworkCore.cpp" />
     <ClCompile Include="PacketHandler.cpp" />
@@ -135,6 +136,7 @@
     <ClCompile Include="SessionManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Consumer.h" />
     <ClInclude Include="IPacketHandler.h" />
     <ClInclude Include="MPMCQueue.h" />
     <ClInclude Include="NetTypes.h" />
