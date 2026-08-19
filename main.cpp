@@ -6,10 +6,11 @@
 
 int main()
 {
+	SessionManager sessions;
 	MPMCQueue<Packet> queue;
 	QueueSink q(&queue);
-	NetworkCore core;
-    PacketHandler h(&core);
+	NetworkCore core(&sessions);
+	PacketHandler h(&sessions);
 	Consumer consumer(&queue, &h);
 
 

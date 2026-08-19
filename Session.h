@@ -25,6 +25,11 @@ public:
     int GetIndex() { return index_; }
 
     void SetId(uint64_t id) { id_ = id; }
+    void SetName(std::string name) { name_ = std::move(name); }
+
+    bool IsNamed() { return !name_.empty(); }
+    
+    std::string GetName() { return name_; }
     uint64_t GetId() { return id_; }
 
 
@@ -36,7 +41,8 @@ private:
 
     SOCKET socket_ = INVALID_SOCKET;
     int index_ = -1;
-    uint64_t id_ = -1;
+    uint64_t id_ = 0;
+    std::string name_;
 
     RingBuffer recvBuffer_;
     RingBuffer sendBuffer_;

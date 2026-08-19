@@ -18,6 +18,8 @@ public:
     void Stop();
     void Broadcast(char* data, int len) { sessionMgr_.Broadcast(data, len); }
     bool SendTo(uint64_t id, const char* data, int len) { return sessionMgr_.SendTo(id, data, len); }
+    bool IsNamed(uint64_t id) { return sessionMgr_.IsNamed(id); }
+
 
 private:
     bool InitSocket(uint16_t port); 
