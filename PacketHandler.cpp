@@ -11,17 +11,17 @@ void PacketHandler::Handle(Packet& pkt)
     std::string cmd;
     iss >> cmd;
 
-    if (!net_->IsNamed(pkt.header.id) && cmd != "/n")
+    if (!session_manager_->IsNamed(pkt.header.id) && cmd != "/n")
     {
         std::string msg = "name plz.";
         Packet out = MakePacket(pkt.header.id, msg);
-        net_->SendTo(pkt.header.id, reinterpret_cast<const char*>(&out), out.header.size);
+        session_manager_->SendTo(pkt.header.id, reinterpret_cast<const char*>(&out), out.header.size);
         return;
     }
 
     if (text.empty() || text[0] != '/')
     {
-        net_->Broadcast(reinterpret_cast<char*>(&pkt), len);
+        session_manager_->Broadcast(reinterpret_cast<char*>(&pkt), len);
         return;
     }
 
@@ -32,16 +32,15 @@ void PacketHandler::Handle(Packet& pkt)
         std::string msg;
         std::getline(iss, msg);
         Packet out = MakePacket(pkt.header.id, msg);
-        if (net_->SendTo(targetId, reinterpret_cast<const char*>(&out), out.header.size))
-			net_->SendTo(pkt.header.id, reinterpret_cast<const char*>(&out), out.header.size);
-    } else if (cmd == "\n")
+        if (session_manager_->SendTo(targetId, reinterpret_cast<const char*>(&out), out.header.size))
+			session_manager_->SendTo(pkt.header.id, reinterpret_cast<const char*>(&out), out.header.size);
+    } else if (cmd == "/n")
     {
         std::string name;
         iss >> name;
-        net_.
         std::string msg = "Hello!" + name;
         Packet out = MakePacket(pkt.header.id, msg);
-        net_->SendTo(pkt.header.id, reinterpret_cast<const char*>(&out), out.header.size);
-        return;
+        session_manager_->SetName(pkt.header.id, name);
+        session_manager_->SendTo(pkt.header.id, reinterpret_cast<const char*>(&out), out.header.size);
     }
 }

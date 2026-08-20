@@ -205,16 +205,8 @@ void NetworkCore::OnAcceptComplete(AcceptContext* ctx)
     setsockopt(clientSocket, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
         (char*)&listenSocket_, sizeof(listenSocket_));
 
-    int index = sessions_.Alloc();
-    if (index == -1) {
-        closesocket(clientSocket);
-        PostAccept(ctx);
-        return;
-    }
-    Session* session = &sessions_[index];
-    session->Init(clientSocket, index, ph_);
-
-    sessionMgr_.Add(session);
+    Session* session = sessions_->Create(clientSocket, ph_);
+    if (!session) { closesocket(clientSocket); PostAccept(ctx); return; }
 
     CreateIoCompletionPort((HANDLE)clientSocket, iocp_,
         (ULONG_PTR)session, 0);
@@ -225,6 +217,5 @@ void NetworkCore::OnAcceptComplete(AcceptContext* ctx)
 
 void NetworkCore::CloseSession(Session* session)
 {
-    sessionMgr_.Remove(session);
-    sessions_.Free(session->GetIndex());
+    sessions_->Destroy(session);
 }

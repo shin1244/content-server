@@ -5,7 +5,6 @@
 #include <vector>
 #include <mswsock.h> 
 
-#include "ObjectPool.h"
 #include "Session.h"
 #include "SessionManager.h"
 #include "IPacketHandler.h"
@@ -13,12 +12,13 @@
 
 class NetworkCore {
 public:
+    NetworkCore(SessionManager* sessionManager) : sessions_(sessionManager) {}
     ~NetworkCore() { Stop(); }
     bool Start(uint16_t port, IPacketHandler* h);
     void Stop();
-    void Broadcast(char* data, int len) { sessionMgr_.Broadcast(data, len); }
-    bool SendTo(uint64_t id, const char* data, int len) { return sessionMgr_.SendTo(id, data, len); }
-    bool IsNamed(uint64_t id) { return sessionMgr_.IsNamed(id); }
+    void Broadcast(char* data, int len) { sessions_->Broadcast(data, len); }
+    bool SendTo(uint64_t id, const char* data, int len) { return sessions_->SendTo(id, data, len); }
+    bool IsNamed(uint64_t id) { return sessions_->IsNamed(id); }
 
 
 private:
@@ -37,8 +37,7 @@ private:
 
     SOCKET listenSocket_ = INVALID_SOCKET;
     HANDLE iocp_ = nullptr;
-    ObjectPool<Session, 1000> sessions_; // 최대 1000명 동시 접속
-    SessionManager sessionMgr_;
+    SessionManager* sessions_;
     LPFN_ACCEPTEX fnAcceptEx_ = nullptr;
     std::vector<std::thread> workers_;
 

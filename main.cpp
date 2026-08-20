@@ -10,8 +10,8 @@ int main()
 	MPMCQueue<Packet> queue;
 	QueueSink q(&queue);
 	NetworkCore core(&sessions);
-	PacketHandler h(&sessions);
-	Consumer consumer(&queue, &h);
+	PacketHandler handler(&sessions);
+	Consumer consumer(&queue, &handler);
 
 
 	core.Start(5050, &q);

@@ -2,15 +2,15 @@
 #include <cstdint>
 #include <sstream>
 #include "Protocol.h"
-#include "NetworkCore.h"
+#include "SessionManager.h"
 
 class PacketHandler
 {
 public:
-	PacketHandler(NetworkCore* net) : net_(net) {}
+	PacketHandler(SessionManager* sessions) : session_manager_(sessions) {}
 	void Handle(Packet& pkt);
 
 private:
-	NetworkCore* net_;
+	SessionManager* session_manager_;
 };
 

@@ -11,7 +11,7 @@
 class Session
 {
 public:
-    void Init(SOCKET socket, int index, IPacketHandler* h);
+    void Init(SOCKET socket, int index, int id, IPacketHandler* h);
     void Close();
 
     void PostRecv();

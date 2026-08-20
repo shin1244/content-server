@@ -1,9 +1,10 @@
 #include "Session.h"
 
-void Session::Init(SOCKET socket, int index, IPacketHandler* h)
+void Session::Init(SOCKET socket, int index, int id, IPacketHandler* h)
 {
     socket_ = socket;
     index_ = index;
+    id_ = id;
     closing_.store(false);
     pendingIO_.store(0);
     sending_.store(false);

@@ -1,18 +1,23 @@
 #include "SessionManager.h"
 
-void SessionManager::Add(Session* s)
+Session* SessionManager::Create(SOCKET sock, IPacketHandler* h)
 {
-	uint64_t id = nextId_.fetch_add(1);
-	s->SetId(id);
 	std::unique_lock g(lock_);
+	int index = pool_.Alloc();
+	if (index == -1) return nullptr;
+	Session* s = &pool_[index];
+	uint64_t id = nextId_.fetch_add(1);
+	s->Init(sock, index, id, h);
 	byId_[id] = s;
+	return s;
 }
 
-void SessionManager::Remove(Session* s)
+void SessionManager::Destroy(Session* s)
 {
 	std::unique_lock g(lock_);
 	byId_.erase(s->GetId());
 	byName_.erase(s->GetName());
+	pool_.Free(s->GetIndex());
 }
 
 void SessionManager::Broadcast(char* data, int len)
