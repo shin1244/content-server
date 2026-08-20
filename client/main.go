@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -29,6 +30,7 @@ type ChatUI struct {
 
 	mu       sync.Mutex
 	messages []string
+	names    map[uint16]string // id -> 닉네임 (서버 스냅샷/델타로 채워짐)
 
 	input []rune
 
@@ -55,6 +57,7 @@ func main() {
 
 	ui := &ChatUI{
 		screen: screen,
+		names:  make(map[uint16]string),
 	}
 
 	// 서버 수신
@@ -98,10 +101,47 @@ func recvLoop(conn net.Conn, ui *ChatUI) {
 			return
 		}
 
-		message := fmt.Sprintf("[RECV][%d] %s", id, string(payload))
+		// id == 0 은 서버가 보내는 제어 메시지 (닉네임 알림/명단/에러 등)
+		if id == 0 {
+			ui.handleControl(string(payload))
+			continue
+		}
 
-		ui.addMessage(message)
+		// 일반 채팅: id 로 닉네임을 찾아서 표시 (없으면 숫자 폴백)
+		name := ui.nameFor(id)
+		ui.addMessage(fmt.Sprintf("[%s] %s", name, string(payload)))
 	}
+}
+
+// handleControl 은 id==0 시스템 메시지를 해석한다.
+//
+//	"NICK <id> <name>" -> id->name 맵 갱신 (스냅샷/델타 공용)
+//	그 외              -> 시스템 메시지로 출력
+func (ui *ChatUI) handleControl(payload string) {
+	parts := strings.SplitN(payload, " ", 3)
+
+	if len(parts) == 3 && parts[0] == "NICK" {
+		id, err := strconv.ParseUint(parts[1], 10, 16)
+		if err == nil {
+			ui.mu.Lock()
+			ui.names[uint16(id)] = parts[2]
+			ui.mu.Unlock()
+		}
+		return
+	}
+
+	ui.addMessage("[SYSTEM] " + payload)
+}
+
+// nameFor 는 id 에 매핑된 닉네임을 반환한다. 아직 모르면 숫자로 폴백.
+func (ui *ChatUI) nameFor(id uint16) string {
+	ui.mu.Lock()
+	defer ui.mu.Unlock()
+
+	if n, ok := ui.names[id]; ok {
+		return n
+	}
+	return fmt.Sprintf("%d", id)
 }
 
 func sendPacket(conn net.Conn, message string) {

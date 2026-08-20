@@ -20,4 +20,5 @@ public:
     bool SendTo(uint64_t id, const char* data, int len);
     bool IsNamed(uint64_t id);
     bool SetName(uint64_t id, std::string name);
+    void SendRosterTo(uint64_t id);
 };

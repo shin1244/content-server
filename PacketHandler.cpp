@@ -38,9 +38,18 @@ void PacketHandler::Handle(Packet& pkt)
     {
         std::string name;
         iss >> name;
-        std::string msg = "Hello!" + name;
-        Packet out = MakePacket(pkt.header.id, msg);
-        session_manager_->SetName(pkt.header.id, name);
-        session_manager_->SendTo(pkt.header.id, reinterpret_cast<const char*>(&out), out.header.size);
+
+        if (!session_manager_->SetName(pkt.header.id, name))
+        {
+            Packet err = MakePacket(0, "already taken");
+            session_manager_->SendTo(pkt.header.id, reinterpret_cast<const char*>(&err), err.header.size);
+            return;
+        }
+    
+        session_manager_->SendRosterTo(pkt.header.id);
+
+        std::string announce = "NICK " + std::to_string(pkt.header.id) + " " + name;
+        Packet a = MakePacket(0, announce);
+        session_manager_->Broadcast(reinterpret_cast<char*>(&a), a.header.size);
     }
 }

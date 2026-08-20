@@ -55,3 +55,22 @@ bool SessionManager::SetName(uint64_t id, std::string name)
 	byName_[name] = id; 
 	return true;
 }
+
+void SessionManager::SendRosterTo(uint64_t id)
+{
+	std::shared_lock g(lock_); 
+
+	auto target = byId_.find(id);
+	if (target == byId_.end()) return;
+	Session* to = target->second;
+
+	for (auto& [sid, s] : byId_)
+	{
+		if (sid == id) continue; 
+		if (!s->IsNamed()) continue;
+
+		std::string line = "NICK " + std::to_string(sid) + " " + s->GetName();
+		Packet pkt = MakePacket(0, line); 
+		to->Send(reinterpret_cast<const char*>(&pkt), pkt.header.size);
+	}
+}
