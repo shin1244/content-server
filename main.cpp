@@ -8,13 +8,11 @@ int main()
 {
 	SessionManager sessions;
 	MPMCQueue<Packet> queue;
-	QueueSink q(&queue);
 	NetworkCore core(&sessions);
-	PacketHandler handler(&sessions);
-	Consumer consumer(&queue, &handler);
+	Consumer consumer;
 
 
-	core.Start(5050, &q);
+	core.Start(5050, &queue);
 	consumer.Start();
 
 	while (true) {}

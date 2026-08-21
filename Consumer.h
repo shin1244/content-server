@@ -6,14 +6,11 @@
 class Consumer
 {
 public:
-	Consumer(MPMCQueue<Packet>* queue, PacketHandler* handler)
-		: queue_(queue), handler_(handler) {}
-	void Start();
+	void Start(MPMCQueue<Packet>* queue);
 	void Stop();
 private:
 	void Loop();
 	MPMCQueue<Packet>* queue_;
-	PacketHandler* handler_; 
 	std::thread thread_;
 };
 

@@ -1,7 +1,8 @@
 #include "Consumer.h"
 
-void Consumer::Start()
+void Consumer::Start(MPMCQueue<Packet>* queue)
 {
+	queue_ = queue;
     thread_ = std::thread([this] { Loop(); });
 }
 
@@ -16,5 +17,7 @@ void Consumer::Loop()
 {
 	Packet pkt;
 	while (queue_->Pop(pkt))
-		handler_->Handle(pkt);
+	{
+		
+	}
 }

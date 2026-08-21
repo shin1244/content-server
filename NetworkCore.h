@@ -7,14 +7,14 @@
 
 #include "Session.h"
 #include "SessionManager.h"
-#include "IPacketHandler.h"
+#include "MPMCQueue.h"
 #pragma comment(lib, "ws2_32.lib")
 
 class NetworkCore {
 public:
     NetworkCore(SessionManager* sessionManager) : sessions_(sessionManager) {}
     ~NetworkCore() { Stop(); }
-    bool Start(uint16_t port, IPacketHandler* h);
+    bool Start(uint16_t port, MPMCQueue<Packet>* h);
     void Stop();
     void Broadcast(char* data, int len) { sessions_->Broadcast(data, len); }
     bool SendTo(uint64_t id, const char* data, int len) { return sessions_->SendTo(id, data, len); }
@@ -41,5 +41,5 @@ private:
     LPFN_ACCEPTEX fnAcceptEx_ = nullptr;
     std::vector<std::thread> workers_;
 
-    IPacketHandler* ph_ = nullptr;
+    MPMCQueue<Packet>* ph_ = nullptr;
 };

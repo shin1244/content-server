@@ -1,6 +1,6 @@
 #include "NetworkCore.h"
 
-bool NetworkCore::Start(uint16_t port, IPacketHandler* h)
+bool NetworkCore::Start(uint16_t port, MPMCQueue<Packet>* h)
 {
     WSADATA wsa;
     if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
