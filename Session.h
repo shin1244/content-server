@@ -6,12 +6,13 @@
 #include "Protocol.h"
 #include "NetTypes.h"
 #include "IPacketHandler.h"
+#include "MPMCQueue.h"
 
 
 class Session
 {
 public:
-    void Init(SOCKET socket, int index, int id, IPacketHandler* h);
+    void Init(SOCKET socket, int index, int id, MPMCQueue<Packet>* h);
     void Close();
 
     void PostRecv();
@@ -53,5 +54,5 @@ private:
     RecvContext recvContext_;
     SendContext sendContext_;
 
-    IPacketHandler* handler_ = nullptr;
+    MPMCQueue<Packet>* handler_ = nullptr;
 };

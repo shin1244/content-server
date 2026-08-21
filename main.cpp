@@ -13,7 +13,7 @@ int main()
 
 
 	core.Start(5050, &queue);
-	consumer.Start();
+	consumer.Start(&queue, &sessions);
 
 	while (true) {}
 

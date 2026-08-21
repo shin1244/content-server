@@ -1,6 +1,8 @@
 #include "Session.h"
 
-void Session::Init(SOCKET socket, int index, int id, IPacketHandler* h)
+#include "MPMCQueue.h"
+
+void Session::Init(SOCKET socket, int index, int id, MPMCQueue<Packet>* h)
 {
     socket_ = socket;
     index_ = index;
@@ -80,7 +82,7 @@ void Session::OnRecv(int bytes)
         recvBuffer_.moveHead(header.size);
         pkt.header.id = id_;
 
-        handler_->OnPacket(pkt);
+        handler_->Push(pkt);
     }
     PostRecv();
 }

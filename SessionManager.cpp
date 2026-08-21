@@ -1,6 +1,6 @@
 #include "SessionManager.h"
 
-Session* SessionManager::Create(SOCKET sock, IPacketHandler* h)
+Session* SessionManager::Create(SOCKET sock, MPMCQueue<Packet>* h)
 {
 	std::unique_lock g(lock_);
 	int index = pool_.Alloc();

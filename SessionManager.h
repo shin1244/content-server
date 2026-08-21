@@ -4,6 +4,7 @@
 #include "Session.h"
 #include <atomic>
 
+#include "MPMCQueue.h"
 #include "ObjectPool.h"
 
 class SessionManager {
@@ -14,7 +15,7 @@ private:
     std::atomic<uint64_t> nextId_{1};
     ObjectPool<Session, 1000> pool_;
 public:
-    Session* Create(SOCKET sock, IPacketHandler* h);
+    Session* Create(SOCKET sock, MPMCQueue<Packet>* h);
     void Destroy(Session* s);
     void Broadcast(char* data, int len);
     bool SendTo(uint64_t id, const char* data, int len);
