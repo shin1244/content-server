@@ -27,10 +27,10 @@ AI에게 질문해 실무에서 사용하는 자료구조에 대한 정보를 �
 | `ObjectPool` | 세션 고정 풀(최대 1000) |
 | `NetTypes` | OverlappedEx / Accept·Recv·Send 컨텍스트 |
 | `Protocol` | 패킷 헤더/`Packet`/`RecvEvent` 정의, `MakePacket` 팩토리 |
-| `MPMCQueue` | 멀티 프로듀서/컨슈머 큐 (mutex + condvar) |
-| `IPacketHandler` | 네트워크→컨텐츠 경계 인터페이스 (`OnPacket`) |
-| `QueueSink` | `IPacketHandler` 구현 = 어댑터. `OnPacket` → 큐 `Push` |
-| `PacketHandler` | 컨텐츠 계층. 큐에서 꺼낸 패킷을 종류별로 처리(전챗/귓속말) |
+| `MPMCQueue` | 멀티 프로듀서/컨슈머 큐 (mutex + condvar). `Session`이 직접 `Push` |
+| `Consumer` | 컨텐츠 계층. 별도 스레드에서 큐 `Pop` → 명령 디스패치(`HandleNick`/`HandleWhisper`/`HandleAddFriend`/`HandleFriend`). `Database*`·`SessionManager*` 주입 |
+| `Database` | PostgreSQL(libpqxx) 래퍼. `SERVER_DB_DSN` 접속, `Ping`/`LoginOrRegister`/`AddFriend` |
+| `IPacketHandler`·`QueueSink`·`PacketHandler` | (레거시) 초기 어댑터/핸들러. 현재 경로는 `Session→큐→Consumer`로 대체됨 |
 
 ## 데이터 흐름
 
@@ -145,11 +145,19 @@ AI에게 질문해 실무에서 사용하는 자료구조에 대한 정보를 �
 - **영속**(인벤/친구/우편이 로그아웃해도 남음): 유저 id 필요. 단 **라우팅용이 아니라** ①저장/불러오기 키 ②관계의 불변 참조(닉·세션은 변해도 유저 id는 안 변함).
 - 세션 id ≠ 계정 id를 미리 나누지 말 것(YAGNI). 중복 로그인/프리로그인 관리 같은 엣지케이스가 실제로 물 때 나눔.
 
-### 19. 친구 & DB — 영속성 진입
-- 영속 친구 = DB 필요. 근데 **친구의 진짜 레슨은 동시성(2인 수정 → 락 순서)** 이라 **메모리 먼저**(락 순서 학습) → DB는 phase 2.
-- 메모리 설계: `Session`에 `friends_`(친구 **id** 집합, `Session*` 금지=UAF) + `friendLock_`(per-player). 상호추가 시 **낮은 id부터 잠금**(또는 `scoped_lock`)으로 데드락 회피. `Init`에서 `clear`. `/f`는 id들을 `Find`로 그때 해석(오프라인=nullptr 스킵).
-- 한계: 세션 id는 휘발 → 신원 재사용 문제. 이게 **영속 계정 id가 필요한 이유**. DB 단계에서 해결.
-- DB 계획: **SQLite**(파일 하나, 서버 불필요; amalgamation 2파일). 신원 키는 **닉네임**(계정/auth 스킵 = "이름으로 로그인, 비번 없음"). 접근은 **동기 먼저**(SQLite 로컬 빠름) → 부하 크면 **DB 워커 스레드+큐**로 async. 새 클래스 **FriendRepository**(영속성=별도 책임, SessionManager엔 안 넣음). 런타임 패턴: **load-on-login → 메모리 캐시 → 변경 시 write-through**.
+### 19. 친구 & DB — 영속성 진입 (SQLite→PostgreSQL로 선회, 갱신됨)
+- 영속 친구 = DB 필요. 처음엔 **메모리 먼저(락 순서 학습) → DB phase 2** 계획이었으나, **DB로 바로 진입**하기로 선회. (동시성 학습은 뒤로, 영속 신원부터 확보)
+- **DB 선택: SQLite → PostgreSQL(libpqxx)**. 파일 DB 대신 실제 서버 DB로. 접속은 `SERVER_DB_DSN` 환경변수(DSN)로 주입. 서버 기동 시 `Database::Ping()`으로 연결 확인 후 리스닝 시작.
+- **신원 = 계정 테이블 `users(user_id, user_name)`**. `user_name`이 로그인 키(비번 없음). `/n`은 **로그인 겸 등록(upsert)** — 있으면 로그인, 없으면 등록, 항상 `user_id` 반환.
+- **id 두 축 확정**: 세션 id(휘발, 라우팅용) vs `user_id`(영속, 관계·저장 키). `/n` 성공 시 세션에 `user_id`를 각인(`SetUserId`)해 둘을 잇는다.
+- 접근은 **동기 먼저**(단일 컨슈머 스레드에서 직접 쿼리) → 부하 크면 **DB 워커 스레드+큐**로 async. 지금은 `Consumer`가 `Database*`를 직접 주입받아 호출.
+- **참고 — 아직 안 한 메모리 설계(친구 동시성 레슨)**: `Session`에 `friends_`(친구 **id** 집합, `Session*` 금지=UAF) + per-player 락, 상호추가 시 **낮은 id부터 잠금**(`scoped_lock`)으로 데드락 회피. 온라인 친구 캐시가 필요해지면 이 설계로 돌아옴.
+
+### 20. 친구 요청 — 단방향 PENDING 행
+- 스키마: `friendships(user_id, friend_id, status default 'PENDING', created_at)`. **`UNIQUE(user_id, friend_id)` 제약 필수**(중복 요청 방지 + `ON CONFLICT` 근거).
+- `/add <이름>`: sender의 `user_id`(세션→`GetUserId`) + 상대 이름→`user_id` 조회 → **자기 자신/미존재 방어** → `INSERT ... ON CONFLICT DO NOTHING`. 단방향 `(user_id, friend_id, PENDING)` 한 행 생성.
+- **DB 예외 vs 논리 실패 분리**: DB 장애는 예외로 던지고(호출부 try/catch → "server error"), 상대없음·자기자신·중복은 반환값(bool)으로. `AddFriend` 안에서 catch하면 둘이 섞이니 금지.
+- 다음 단계(`/f`): 받은 요청 조회는 `WHERE friend_id = 나 AND status='PENDING'`, 수락은 `PENDING`→`ACCEPTED` UPDATE. 양방향 중복(역방향 행) 처리는 수락 흐름에서 같이.
 
 ## 진행 로그
 
@@ -187,6 +195,20 @@ AI에게 질문해 실무에서 사용하는 자료구조에 대한 정보를 �
 - 논의만 하고 아직 미적용인 리팩터링: **SessionManager를 main 소유+주입**(middle-man 제거, 노트 15) / **ObjectPool을 SessionManager로 흡수**(Create/Destroy, 노트 16).
 - 다음: 친구(메모리 먼저 → DB) — SQLite, 닉네임=신원, FriendRepository. (노트 19)
 
+### 2026-08-24 — DB 영속성 진입 (PostgreSQL) & 로그인/친구요청
+- **DB 선회 (SQLite → PostgreSQL/libpqxx)**: `Database` 클래스 추가. `SERVER_DB_DSN`(DSN)으로 접속, `Ping()`(`SELECT 1`)로 연결 확인. `main`이 DB 먼저 연결(실패 시 미기동) → 네트워크/컨슈머 기동. (노트 19 갱신)
+- **로그인/등록(`/n`, 로그인 겸 등록)**: `Database::LoginOrRegister` — `users(user_id, user_name)`에 `INSERT ... ON CONFLICT DO UPDATE RETURNING user_id` upsert. 있으면 로그인, 없으면 등록, 항상 user_id 반환.
+- **세션 id ≠ user_id 확정**: `/n` 성공 시 `SetUserId`로 영속 계정 id를 세션에 각인. `SessionManager::GetUserId` 추가. (노트 18 구현)
+- **친구 요청(`/add`)**: `friendships(user_id, friend_id, status='PENDING', created_at)` + `Database::AddFriend(userId, friendName)` — 상대 이름→id 조회, 자기자신/미존재 방어, `INSERT ... ON CONFLICT DO NOTHING`. 단방향 PENDING 행. (노트 20)
+- **컨텐츠 계층 리팩터**: `PacketHandler` → `Consumer`로 이동. 명령 디스패치를 `HandleNick`/`HandleWhisper`/`HandleAddFriend`/`HandleFriend`로 분리.
+- 잡은 버그:
+  - **`NetworkCore::Stop()` 이중 호출**(명시적 `Stop` + 소멸자 `Stop` → 죽은 핸들 재사용/이중 CloseHandle). 핸들을 `nullptr`/`INVALID_SOCKET`으로 리셋해 **멱등화**.
+  - `main`의 `while(true)` 종료 불가 → `cin.get()` 정상 종료 경로로 교체.
+- 미해결(다음 세션):
+  - **`switch (cmd)` 컴파일 불가** — `cmd`가 `std::string`이라 `case "/w":` 안 됨. `if/else`로 교체 필요.
+  - `friendships`에 **`UNIQUE(user_id, friend_id)` 제약** 추가(없으면 `ON CONFLICT` 런타임 에러).
+  - `/f`(친구 수락/목록) 미구현.
+
 ## TODO / 남은 이슈
 
 ### 논의됨, 아직 미적용 (리팩터링)
@@ -212,15 +234,17 @@ AI에게 질문해 실무에서 사용하는 자료구조에 대한 정보를 �
 2. [x] 전챗 (락 안에서 스냅샷 → 락 밖에서 Send 패턴)
 3. [x] 귓속말 (`/w`, id 기반)
 4. [x] 닉네임 레지스트리 + **스냅샷/델타** 동기화 (`/n`, id=0 시스템 메시지)
-5. [ ] **친구** (2인 수정 → 락 순서 규칙) — 메모리 먼저 → DB(SQLite) 영속화 ← **지금 여기**
+5. [~] **친구** — DB(PostgreSQL) 영속화. `/add`(요청, PENDING) 완료 ← **지금 여기**. 남음: `/f`(수락 PENDING→ACCEPTED / 목록), 양방향 중복 처리
 6. [ ] 차단 (per-player 락)
 7. [ ] 랭킹 (읽기 폭주/쓰기 소수 비대칭)
 8. [ ] 거래 (2인 상태머신 + 데드락 + 중도 이탈 롤백) — 클라이맥스
 9. [ ] 우편 (온라인/오프라인 경계 + 영속성)
 
-### DB / 영속성 (친구부터)
-- [ ] SQLite amalgamation(`sqlite3.c/.h`) 프로젝트에 추가
-- [ ] 스키마: `friends(nickname, friend)` (+ 필요시 `accounts(nickname)`)
-- [ ] `FriendRepository`(Open/Load/Add/Remove) — 영속성 별도 책임
-- [ ] `/n` 시 친구목록 load → `friends_` 캐시 / `/friend` 시 메모리+DB write-through
+### DB / 영속성 (PostgreSQL + libpqxx)
+- [x] `Database` 클래스 + `SERVER_DB_DSN` 접속 + `Ping()`
+- [x] 스키마: `users(user_id, user_name UNIQUE)`, `friendships(user_id, friend_id, status, created_at)`
+- [x] `LoginOrRegister`(upsert), `AddFriend`(요청 생성)
+- [ ] **`friendships`에 `UNIQUE(user_id, friend_id)` 제약 추가** (ON CONFLICT 근거)
+- [ ] `/f` 친구목록 조회 + 요청 수락(PENDING→ACCEPTED)
+- [ ] `/n` 시 친구목록 load → 메모리 캐시 / 변경 시 write-through
 - [ ] (나중) DB 호출 async화 — DB 워커 스레드 + 큐 (단일 컨슈머 블로킹 회피)
