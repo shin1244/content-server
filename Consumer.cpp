@@ -61,10 +61,19 @@ void Consumer::Handle(Packet& pkt)
         std::string name;
         iss >> name;
 
-        if (!session_manager_->SetName(pkt.header.id, name))
+        if (name.size() < 3 || name.size() >= 10)
         {
-            Packet err = MakePacket(0, "already taken");
-            session_manager_->SendTo(pkt.header.id, reinterpret_cast<const char*>(&err), err.header.size);
+            Packet err = MakePacket(0, "invalid name");
+            session_manager_->SendTo(pkt.header.id,
+                reinterpret_cast<const char*>(&err), err.header.size);
+            return;
+        }
+
+        if (session_manager_->IsNamed(pkt.header.id))
+        {
+            Packet err = MakePacket(0, "already name");
+            session_manager_->SendTo(pkt.header.id,
+                reinterpret_cast<const char*>(&err), err.header.size);
             return;
         }
 

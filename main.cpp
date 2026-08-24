@@ -16,7 +16,6 @@ int main()
         return 1;
     }
 
-    // 2. try 밖에서도 DB 객체를 유지할 수 있도록 수명 관리
     std::unique_ptr<Database> db;
     try {
         db = std::make_unique<Database>(dsnEnv);
@@ -26,7 +25,7 @@ int main()
     }
     catch (const std::exception& e) {
         std::cerr << "[DB] connect failed: " << e.what() << "\n";
-        return 1; // DB 연결 실패 시 서버 종료
+        return 1; 
     }
 
 	SessionManager sessions;
