@@ -1,113 +1,132 @@
 #include "Consumer.h"
-
 #include <iostream>
 
 void Consumer::Start(MPMCQueue<Packet>* queue, SessionManager* sessions, Database* db)
 {
     queue_ = queue;
     session_manager_ = sessions;
-    thread_ = std::thread([this] { Loop(); });
     db_ = db;
+
+    thread_ = std::thread([this] { Loop(); });
 }
 
 void Consumer::Stop()
 {
-	queue_->Stop();
-	if (thread_.joinable())
-		thread_.join();
+    if (queue_) queue_->Stop();
+    if (thread_.joinable()) thread_.join();
 }
 
 void Consumer::Loop()
 {
-	Packet pkt;
-	while (queue_->Pop(pkt))
-	{
+    Packet pkt;
+    while (queue_->Pop(pkt))
+    {
         Handle(pkt);
-	}
+    }
 }
 
 void Consumer::Handle(Packet& pkt)
 {
-    int len = pkt.header.size;
+    const uint64_t sessionId = pkt.header.id;
+    const int len = pkt.header.size;
     std::string text(pkt.message, len - HEADER_SIZE);
+
+    if (text.empty() || text[0] != '/')
+    {
+        if (!session_manager_->IsNamed(sessionId)) {
+            SendError(sessionId, "name plz.");
+            return;
+        }
+        session_manager_->Broadcast(reinterpret_cast<char*>(&pkt), len);
+        return;
+    }
 
     std::istringstream iss(text);
     std::string cmd;
     iss >> cmd;
 
-    if (!session_manager_->IsNamed(pkt.header.id) && cmd != "/n")
+    if (cmd == "/n")
     {
-        std::string msg = "name plz.";
-        Packet out = MakePacket(pkt.header.id, msg);
-        session_manager_->SendTo(pkt.header.id, reinterpret_cast<const char*>(&out), out.header.size);
+        HandleNick(sessionId, iss);
         return;
     }
 
-    if (text.empty() || text[0] != '/')
+    // 닉네임 설정 전에는 다른 명령어 실행 불가
+    if (!session_manager_->IsNamed(sessionId))
     {
-        session_manager_->Broadcast(reinterpret_cast<char*>(&pkt), len);
+        SendError(sessionId, "name plz.");
         return;
     }
 
     if (cmd == "/w")
     {
-        uint64_t targetId = 0;
-        iss >> targetId;
-        std::string msg;
-        std::getline(iss, msg);
-        Packet out = MakePacket(pkt.header.id, msg);
-        if (session_manager_->SendTo(targetId, reinterpret_cast<const char*>(&out), out.header.size))
-            session_manager_->SendTo(pkt.header.id, reinterpret_cast<const char*>(&out), out.header.size);
+        HandleWhisper(sessionId, iss);
     }
-    else if (cmd == "/n")
+}
+
+void Consumer::HandleNick(uint64_t sessionId, std::istringstream& iss)
+{
+    std::string name;
+    iss >> name;
+
+    if (name.size() < 3 || name.size() >= 10) {
+        SendError(sessionId, "invalid name");
+        return;
+    }
+
+    if (session_manager_->IsNamed(sessionId)) {
+        SendError(sessionId, "already name");
+        return;
+    }
+
+    uint64_t userId = 0;
+    try {
+        userId = db_->LoginOrRegister(name);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[DB] LoginOrRegister failed: " << e.what() << "\n";
+        SendError(sessionId, "server error");
+        return;
+    }
+
+    if (!session_manager_->SetName(sessionId, name)) {
+        SendError(sessionId, "already online");
+        return;
+    }
+
+    session_manager_->SetUserId(sessionId, userId);
+    session_manager_->SendRosterTo(sessionId);
+
+    std::string announce = "NICK " + std::to_string(sessionId) + " " + name;
+    Packet a = MakePacket(0, announce);
+    session_manager_->Broadcast(reinterpret_cast<char*>(&a), a.header.size);
+}
+
+void Consumer::HandleWhisper(uint64_t senderId, std::istringstream& iss)
+{
+    uint64_t targetId = 0;
+    if (!(iss >> targetId)) return;
+
+    std::string msg;
+    iss >> std::ws; // targetId 읽은 후 남은 앞쪽 공백 제거
+    std::getline(iss, msg);
+
+    if (msg.empty()) return;
+
+    Packet out = MakePacket(senderId, msg);
+    if (session_manager_->SendTo(targetId, reinterpret_cast<const char*>(&out), out.header.size))
     {
-        std::string name;
-        iss >> name;
-
-        if (name.size() < 3 || name.size() >= 10)
-        {
-            Packet err = MakePacket(0, "invalid name");
-            session_manager_->SendTo(pkt.header.id,
-                reinterpret_cast<const char*>(&err), err.header.size);
-            return;
-        }
-
-        if (session_manager_->IsNamed(pkt.header.id))
-        {
-            Packet err = MakePacket(0, "already name");
-            session_manager_->SendTo(pkt.header.id,
-                reinterpret_cast<const char*>(&err), err.header.size);
-            return;
-        }
-
-        uint64_t userId = 0;
-        try
-        {
-            userId = db_->LoginOrRegister(name);
-        }
-        catch (const std::exception& e)
-        {
-            std::cerr << "[DB] LoginOrRegister failed: " << e.what() << "\n";
-            Packet err = MakePacket(0, "server error");
-            session_manager_->SendTo(pkt.header.id,
-                reinterpret_cast<const char*>(&err), err.header.size);
-            return;
-        }
-
-        if (!session_manager_->SetName(pkt.header.id, name))
-        {
-            Packet err = MakePacket(0, "already online");
-            session_manager_->SendTo(pkt.header.id,
-                reinterpret_cast<const char*>(&err), err.header.size);
-            return;
-        }
-
-        session_manager_->SetUserId(pkt.header.id, userId);
-
-        session_manager_->SendRosterTo(pkt.header.id);
-
-        std::string announce = "NICK " + std::to_string(pkt.header.id) + " " + name;
-        Packet a = MakePacket(0, announce);
-        session_manager_->Broadcast(reinterpret_cast<char*>(&a), a.header.size);
+        SendPacket(senderId, out);
     }
+}
+
+void Consumer::SendPacket(uint64_t sessionId, const Packet& pkt)
+{
+    session_manager_->SendTo(sessionId, reinterpret_cast<const char*>(&pkt), pkt.header.size);
+}
+
+void Consumer::SendError(uint64_t sessionId, const std::string& msg)
+{
+    Packet err = MakePacket(0, msg);
+    SendPacket(sessionId, err);
 }

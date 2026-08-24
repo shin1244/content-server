@@ -6,7 +6,6 @@
 #include "Consumer.h"
 #include "Database.h"
 #include <iostream>
-#include <cstdlib>
 
 int main()
 {
@@ -42,7 +41,6 @@ int main()
 
     // 서버 종료 처리
     consumer.Stop();
-    core.Stop();
 
     return 0;
 }
