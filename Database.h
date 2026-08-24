@@ -7,7 +7,8 @@ class Database
 {
 public:
     explicit Database(const std::string& connString);
-    bool     Ping();                                    
+    bool Ping();               
+    uint64_t LoginOrRegister(const std::string& name);
 
 private:
     pqxx::connection conn_;

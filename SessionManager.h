@@ -22,4 +22,6 @@ public:
     bool IsNamed(uint64_t id);
     bool SetName(uint64_t id, std::string name);
     void SendRosterTo(uint64_t id);
+
+    void SetUserId(uint64_t memId, uint64_t userId);
 };

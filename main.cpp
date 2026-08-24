@@ -25,20 +25,24 @@ int main()
     }
     catch (const std::exception& e) {
         std::cerr << "[DB] connect failed: " << e.what() << "\n";
-        return 1; 
+        return 1;
     }
 
-	SessionManager sessions;
-	MPMCQueue<Packet> queue;
-	NetworkCore core(&sessions);
-	Consumer consumer;
+    SessionManager sessions;
+    MPMCQueue<Packet> queue;
+    NetworkCore core(&sessions);
+    Consumer consumer;
 
+    core.Start(5050, &queue);
 
-	core.Start(5050, &queue);
-	consumer.Start(&queue, &sessions);
+    consumer.Start(&queue, &sessions, db.get());
 
-	while (true) {}
+    std::cout << "[Server] Press Enter to shutdown...\n";
+    std::cin.get(); 
 
-	consumer.Stop();
-	core.Stop();
+    // 서버 종료 처리
+    consumer.Stop();
+    core.Stop();
+
+    return 0;
 }

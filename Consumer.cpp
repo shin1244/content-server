@@ -1,10 +1,13 @@
 #include "Consumer.h"
 
-void Consumer::Start(MPMCQueue<Packet>* queue, SessionManager* sessions)
+#include <iostream>
+
+void Consumer::Start(MPMCQueue<Packet>* queue, SessionManager* sessions, Database* db)
 {
-	queue_ = queue;
-	session_manager_ = sessions;
+    queue_ = queue;
+    session_manager_ = sessions;
     thread_ = std::thread([this] { Loop(); });
+    db_ = db;
 }
 
 void Consumer::Stop()
@@ -76,6 +79,30 @@ void Consumer::Handle(Packet& pkt)
                 reinterpret_cast<const char*>(&err), err.header.size);
             return;
         }
+
+        uint64_t userId = 0;
+        try
+        {
+            userId = db_->LoginOrRegister(name);
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << "[DB] LoginOrRegister failed: " << e.what() << "\n";
+            Packet err = MakePacket(0, "server error");
+            session_manager_->SendTo(pkt.header.id,
+                reinterpret_cast<const char*>(&err), err.header.size);
+            return;
+        }
+
+        if (!session_manager_->SetName(pkt.header.id, name))
+        {
+            Packet err = MakePacket(0, "already online");
+            session_manager_->SendTo(pkt.header.id,
+                reinterpret_cast<const char*>(&err), err.header.size);
+            return;
+        }
+
+        session_manager_->SetUserId(pkt.header.id, userId);
 
         session_manager_->SendRosterTo(pkt.header.id);
 

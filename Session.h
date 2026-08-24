@@ -33,6 +33,8 @@ public:
     std::string GetName() { return name_; }
     uint64_t GetId() { return id_; }
 
+    void SetUserId(uint64_t userId) { userId_ = userId;  }
+
 
 private:
     std::atomic<int> pendingIO_{ 0 }; // IO중 참조 카운트
@@ -43,6 +45,8 @@ private:
     SOCKET socket_ = INVALID_SOCKET;
     int index_ = -1;
     uint64_t id_ = 0;
+    uint64_t userId_ = 0;
+
     std::string name_;
 
     RingBuffer recvBuffer_;

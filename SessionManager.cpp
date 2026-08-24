@@ -74,3 +74,8 @@ void SessionManager::SendRosterTo(uint64_t id)
 		to->Send(reinterpret_cast<const char*>(&pkt), pkt.header.size);
 	}
 }
+
+void SessionManager::SetUserId(uint64_t memId, uint64_t userId)
+{
+	byId_[memId]->SetUserId(userId);
+}
