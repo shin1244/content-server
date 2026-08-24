@@ -75,7 +75,12 @@ void SessionManager::SendRosterTo(uint64_t id)
 	}
 }
 
-void SessionManager::SetUserId(uint64_t memId, uint64_t userId)
+void SessionManager::SetUserId(uint64_t sessionId, uint64_t userId)
 {
-	byId_[memId]->SetUserId(userId);
+	byId_[sessionId]->SetUserId(userId);
+}
+
+uint64_t SessionManager::GetUserId(uint64_t sessionId)
+{
+	return byId_[sessionId]->GetUserId(sessionId);
 }

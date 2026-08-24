@@ -23,5 +23,6 @@ public:
     bool SetName(uint64_t id, std::string name);
     void SendRosterTo(uint64_t id);
 
-    void SetUserId(uint64_t memId, uint64_t userId);
+    void SetUserId(uint64_t sessionId, uint64_t userId);
+    uint64_t GetUserId(uint64_t sessionId);
 };

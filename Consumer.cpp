@@ -58,10 +58,9 @@ void Consumer::Handle(Packet& pkt)
         return;
     }
 
-    if (cmd == "/w")
-    {
-        HandleWhisper(sessionId, iss);
-    }
+    if (cmd == "/w")        HandleWhisper(sessionId, iss);
+    else if (cmd == "/add") HandleAddFriend(sessionId, iss);
+    else if (cmd == "/f")   HandleFriend(sessionId, iss);
 }
 
 void Consumer::HandleNick(uint64_t sessionId, std::istringstream& iss)
@@ -118,6 +117,32 @@ void Consumer::HandleWhisper(uint64_t senderId, std::istringstream& iss)
     {
         SendPacket(senderId, out);
     }
+}
+
+void Consumer::HandleAddFriend(uint64_t senderId, std::istringstream& iss)
+{
+    std::string friendName;
+    iss >> friendName;
+    if (friendName.empty()) { SendError(senderId, "usage: /add <name>"); return; }
+
+    uint64_t myUserId = session_manager_->GetUserId(senderId);
+
+    bool ok;
+    try {
+        ok = db_->AddFriend(myUserId, friendName);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[DB] AddFriend failed: " << e.what() << "\n";
+        SendError(senderId, "server error");
+        return;
+    }
+
+    SendError(senderId, ok ? ("friend request sent: " + friendName)
+        : "add failed"); 
+}
+
+void Consumer::HandleFriend(uint64_t senderId, std::istringstream& iss)
+{
 }
 
 void Consumer::SendPacket(uint64_t sessionId, const Packet& pkt)

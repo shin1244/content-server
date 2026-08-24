@@ -33,8 +33,8 @@ public:
     std::string GetName() { return name_; }
     uint64_t GetId() { return id_; }
 
-    void SetUserId(uint64_t userId) { userId_ = userId;  }
-
+    void SetUserId(uint64_t userId) { userId_ = userId; }
+    uint64_t GetUserId(uint64_t sessionId) { return userId_; }
 
 private:
     std::atomic<int> pendingIO_{ 0 }; // IO중 참조 카운트

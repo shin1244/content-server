@@ -21,6 +21,32 @@ bool Database::Ping()
     }
 }
 
+bool Database::AddFriend(uint64_t userId, const std::string& friendName)
+{
+    pqxx::work tx(conn_);
+
+    pqxx::result found = tx.exec(
+        "SELECT user_id FROM users WHERE user_name = $1",
+        pqxx::params{ friendName });
+    if (found.empty())
+        return false;
+
+    uint64_t friendId = found[0][0].as<uint64_t>();
+
+    if (friendId == userId)
+        return false;
+
+    pqxx::result ins = tx.exec(
+        "INSERT INTO friendships(user_id, friend_id) VALUES($1, $2) "
+        "ON CONFLICT (user_id, friend_id) DO NOTHING "
+        "RETURNING user_id",
+        pqxx::params{ userId, friendId });
+
+    tx.commit();
+
+    return !ins.empty();
+}
+
 uint64_t Database::LoginOrRegister(const std::string& name)
 {
     pqxx::work tx(conn_);
