@@ -47,6 +47,52 @@ bool Database::AddFriend(uint64_t userId, const std::string& friendName)
     return !ins.empty();
 }
 
+bool Database::AcceptFriend(uint64_t userId, const std::string& friendName)
+{
+    pqxx::work tx(conn_);
+
+    pqxx::result found = tx.exec(
+        "SELECT user_id FROM users WHERE user_name = $1",
+        pqxx::params{ friendName });
+    if (found.empty())
+        return false;
+
+    uint64_t requesterId = found[0][0].as<uint64_t>();
+
+    pqxx::result upd = tx.exec(
+        "UPDATE friendships SET status = 'ACCEPTED' "
+        "WHERE user_id = $1 AND friend_id = $2 AND status = 'PENDING' "
+        "RETURNING user_id",
+        pqxx::params{ requesterId, userId });
+
+    tx.commit();
+
+    return !upd.empty();
+}
+
+bool Database::RejectFriend(uint64_t userId, const std::string& friendName)
+{
+    pqxx::work tx(conn_);
+
+    pqxx::result found = tx.exec(
+        "SELECT user_id FROM users WHERE user_name = $1",
+        pqxx::params{ friendName });
+    if (found.empty())
+        return false;
+
+    uint64_t requesterId = found[0][0].as<uint64_t>();
+
+    pqxx::result del = tx.exec(
+        "DELETE FROM friendships "
+        "WHERE user_id = $1 AND friend_id = $2 AND status = 'PENDING' "
+        "RETURNING user_id",
+        pqxx::params{ requesterId, userId });
+
+    tx.commit();
+
+    return !del.empty();
+}
+
 uint64_t Database::LoginOrRegister(const std::string& name)
 {
     pqxx::work tx(conn_);

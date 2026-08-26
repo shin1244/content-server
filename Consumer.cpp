@@ -124,8 +124,8 @@ void Consumer::HandleFriend(uint64_t senderId, std::istringstream& iss)
     iss >> command;
 
     if (command == "add")    HandleFriendAdd(senderId, iss);
-    //else if (command == "accept") HandleFriendAccept(senderId, iss);
-    //else if (command == "reject") HandleFriendReject(senderId, iss);
+    else if (command == "accept") HandleFriendAccept(senderId, iss);
+    else if (command == "reject") HandleFriendReject(senderId, iss);
     //else if (command == "block")  HandleFriendBlock(senderId, iss);
     //else if (command == "list")   HandleFriendList(senderId, iss);
     else SendError(senderId, "usage: /f add|accept|reject|block|list <name>");
@@ -150,6 +150,46 @@ void Consumer::HandleFriendAdd(uint64_t senderId, std::istringstream& iss)
     }
 
     SendError(senderId, ok ? ("friend request sent: " + friendName) : "add failed");
+}
+
+void Consumer::HandleFriendAccept(uint64_t senderId, std::istringstream& iss)
+{
+    std::string friendName;
+    iss >> friendName;
+    if (friendName.empty()) { SendError(senderId, "usage: /f accept <name>"); return; }
+
+    uint64_t myUserId = session_manager_->GetUserId(senderId);
+    bool ok;
+    try {
+        ok = db_->AcceptFriend(myUserId, friendName);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[DB] AddFriend failed: " << e.what() << "\n";
+        SendError(senderId, "server error");
+        return;
+    }
+
+    SendError(senderId, ok ? ("friend request sent: " + friendName) : "Accept failed");
+}
+
+void Consumer::HandleFriendReject(uint64_t senderId, std::istringstream& iss)
+{
+    std::string friendName;
+    iss >> friendName;
+    if (friendName.empty()) { SendError(senderId, "usage: /f reject <name>"); return; }
+
+    uint64_t myUserId = session_manager_->GetUserId(senderId);
+    bool ok;
+    try {
+        ok = db_->RejectFriend(myUserId, friendName);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[DB] AddFriend failed: " << e.what() << "\n";
+        SendError(senderId, "server error");
+        return;
+    }
+
+    SendError(senderId, ok ? ("friend request sent: " + friendName) : "Accept failed");
 }
 
 void Consumer::SendPacket(uint64_t sessionId, const Packet& pkt)
