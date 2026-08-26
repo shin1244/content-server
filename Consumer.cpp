@@ -93,6 +93,9 @@ void Consumer::HandleNick(uint64_t sessionId, std::istringstream& iss)
     }
 
     session_manager_->SetUserId(sessionId, userId);
+    auto friendIds = db_->GetFriendIds(userId);           
+    session_manager_->LoadFriendCache(userId, friendIds);
+
     session_manager_->SendRosterTo(sessionId);
 
     std::string announce = "NICK " + std::to_string(sessionId) + " " + name;
@@ -159,17 +162,23 @@ void Consumer::HandleFriendAccept(uint64_t senderId, std::istringstream& iss)
     if (friendName.empty()) { SendError(senderId, "usage: /f accept <name>"); return; }
 
     uint64_t myUserId = session_manager_->GetUserId(senderId);
-    bool ok;
+
+    uint64_t friendId = 0;
     try {
-        ok = db_->AcceptFriend(myUserId, friendName);
+        friendId = db_->AcceptFriend(myUserId, friendName);
     }
     catch (const std::exception& e) {
-        std::cerr << "[DB] AddFriend failed: " << e.what() << "\n";
+        std::cerr << "[DB] AcceptFriend failed: " << e.what() << "\n";
         SendError(senderId, "server error");
         return;
     }
 
-    SendError(senderId, ok ? ("friend request sent: " + friendName) : "Accept failed");
+    if (friendId == 0) { SendError(senderId, "Accept failed"); return; }
+
+    session_manager_->CacheAddFriend(myUserId, friendId);   // 내 캐시
+    session_manager_->CacheAddFriend(friendId, myUserId);   // 상대 캐시
+
+    SendError(senderId, "friend accepted: " + friendName);
 }
 
 void Consumer::HandleFriendReject(uint64_t senderId, std::istringstream& iss)
@@ -199,9 +208,9 @@ void Consumer::HandleFriendBlock(uint64_t senderId, std::istringstream& iss)
     if (friendName.empty()) { SendError(senderId, "usage: /f block <name>"); return; }
 
     uint64_t myUserId = session_manager_->GetUserId(senderId);
-    bool ok;
+    uint64_t friendId = 0;
     try {
-        ok = db_->BlockFriend(myUserId, friendName);
+        friendId = db_->BlockFriend(myUserId, friendName);
     }
     catch (const std::exception& e) {
         std::cerr << "[DB] AddFriend failed: " << e.what() << "\n";
@@ -209,7 +218,13 @@ void Consumer::HandleFriendBlock(uint64_t senderId, std::istringstream& iss)
         return;
     }
 
-    SendError(senderId, ok ? ("friend request sent: " + friendName) : "Block failed");
+
+    if (friendId == 0) { SendError(senderId, "Block failed"); return; }
+
+    session_manager_->CacheRemoveFriend(myUserId, friendId);
+    session_manager_->CacheRemoveFriend(friendId, myUserId);
+
+    SendError(senderId, "friend blocked: " + friendName);
 }
 
 void Consumer::HandleFriendList(uint64_t senderId, std::istringstream& iss)

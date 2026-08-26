@@ -1,6 +1,7 @@
 #pragma once
 #include <atomic>
 #include <mutex>
+#include <unordered_set>
 
 #include "RingBuffer.h"
 #include "Protocol.h"
@@ -34,7 +35,11 @@ public:
     uint64_t GetId() { return id_; }
 
     void SetUserId(uint64_t userId) { userId_ = userId; }
-    uint64_t GetUserId(uint64_t sessionId) { return userId_; }
+    uint64_t GetUserId() { return userId_; }
+
+    void addFriend(uint64_t friendId);
+    void removeFriend(uint64_t friendId);
+    bool hasFriend(uint64_t friendId);
 
 private:
     std::atomic<int> pendingIO_{ 0 }; // IO중 참조 카운트
@@ -48,6 +53,7 @@ private:
     uint64_t userId_ = 0;
 
     std::string name_;
+    std::unordered_set<uint64_t> friendIds_;
 
     RingBuffer recvBuffer_;
     RingBuffer sendBuffer_;

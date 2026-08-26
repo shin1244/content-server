@@ -13,6 +13,7 @@ void Session::Init(SOCKET socket, int index, int id, MPMCQueue<Packet>* h)
     recvBuffer_.Clear();
     sendBuffer_.Clear();
     handler_ = h;
+    friendIds_.clear();
 }
 
 void Session::Close()
@@ -145,4 +146,19 @@ bool Session::CompleteIO()
     int count = --pendingIO_;
 
     return closing_ && count == 0;
+}
+
+void Session::addFriend(uint64_t friendId)
+{
+    friendIds_.insert(friendId);
+}
+
+void Session::removeFriend(uint64_t friendId)
+{
+    friendIds_.erase(friendId);
+}
+
+bool Session::hasFriend(uint64_t friendId)
+{
+    return friendIds_.contains(friendId);
 }

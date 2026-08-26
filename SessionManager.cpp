@@ -17,6 +17,7 @@ void SessionManager::Destroy(Session* s)
 	std::unique_lock g(lock_);
 	byId_.erase(s->GetId());
 	byName_.erase(s->GetName());
+	byUserId_.erase(s->GetUserId());
 	pool_.Free(s->GetIndex());
 }
 
@@ -75,12 +76,64 @@ void SessionManager::SendRosterTo(uint64_t id)
 	}
 }
 
+void SessionManager::LoadFriendCache(uint64_t userId, const std::vector<uint64_t>& ids)
+{
+	std::unique_lock g(lock_);
+	auto it = byUserId_.find(userId);
+	if (it == byUserId_.end()) return;
+	auto sit = byId_.find(it->second);
+	if (sit == byId_.end()) return;
+
+	for (uint64_t id : ids)
+		sit->second->addFriend(id);
+}
+
+// 세션의 친구 캐쉬에 추가
+void SessionManager::CacheAddFriend(uint64_t userId, uint64_t friendId)
+{
+	std::unique_lock g(lock_);
+	auto it = byUserId_.find(userId);
+	if (it == byUserId_.end()) return;
+	auto sit = byId_.find(it->second);
+	if (sit == byId_.end()) return;
+	sit->second->addFriend(friendId);
+}
+
+// 세션의 친구 캐쉬에 삭제
+void SessionManager::CacheRemoveFriend(uint64_t userId, uint64_t friendId)
+{
+	std::unique_lock g(lock_);
+	auto it = byUserId_.find(userId);
+	if (it == byUserId_.end()) return;
+	auto sit = byId_.find(it->second);
+	if (sit == byId_.end()) return;
+	sit->second->removeFriend(friendId);
+}
+
+// 세션에서 두 유저가 친구 관계인지 확인
+bool SessionManager::AreFriends(uint64_t userId, uint64_t friendId)
+{
+	std::shared_lock lk(lock_);
+	auto it = byUserId_.find(userId);
+	if (it == byUserId_.end()) return false;
+	auto sit = byId_.find(it->second);
+	if (sit == byId_.end()) return false;
+	return sit->second->hasFriend(friendId);
+}
+
 void SessionManager::SetUserId(uint64_t sessionId, uint64_t userId)
 {
-	byId_[sessionId]->SetUserId(userId);
+	std::unique_lock g(lock_);
+	auto it = byId_.find(sessionId);
+	if (it == byId_.end()) return;
+	it->second->SetUserId(userId);
+	byUserId_[userId] = sessionId;
 }
 
 uint64_t SessionManager::GetUserId(uint64_t sessionId)
 {
-	return byId_[sessionId]->GetUserId(sessionId);
+	std::shared_lock g(lock_);
+	auto it = byId_.find(sessionId);
+	if (it == byId_.end()) return 0;
+	return it->second->GetUserId();
 }

@@ -16,10 +16,11 @@ public:
     explicit Database(const std::string& connString);
     bool Ping();               
     bool AddFriend(uint64_t userId, const std::string& friendName);
-    bool AcceptFriend(uint64_t userId, const std::string& friendName);
+    uint64_t AcceptFriend(uint64_t userId, const std::string& friendName);
     bool RejectFriend(uint64_t userId, const std::string& friendName);
-    bool BlockFriend(uint64_t userId, const std::string& friendName);
+    uint64_t BlockFriend(uint64_t userId, const std::string& friendName);
     FriendList GetFriendList(uint64_t userId);
+    std::vector<uint64_t> GetFriendIds(uint64_t userId);
     
     uint64_t LoginOrRegister(const std::string& name);
 

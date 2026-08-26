@@ -47,7 +47,7 @@ bool Database::AddFriend(uint64_t userId, const std::string& friendName)
     return !ins.empty();
 }
 
-bool Database::AcceptFriend(uint64_t userId, const std::string& friendName)
+uint64_t Database::AcceptFriend(uint64_t userId, const std::string& friendName)
 {
     pqxx::work tx(conn_);
 
@@ -55,7 +55,7 @@ bool Database::AcceptFriend(uint64_t userId, const std::string& friendName)
         "SELECT user_id FROM users WHERE user_name = $1",
         pqxx::params{ friendName });
     if (found.empty())
-        return false;
+        return 0;
 
     uint64_t requesterId = found[0][0].as<uint64_t>();
 
@@ -67,7 +67,10 @@ bool Database::AcceptFriend(uint64_t userId, const std::string& friendName)
 
     tx.commit();
 
-    return !upd.empty();
+    if (upd.empty())
+        return 0; // 실패
+
+    return requesterId; // 성공 → 상대 id 반환
 }
 
 bool Database::RejectFriend(uint64_t userId, const std::string& friendName)
@@ -93,7 +96,7 @@ bool Database::RejectFriend(uint64_t userId, const std::string& friendName)
     return !del.empty();
 }
 
-bool Database::BlockFriend(uint64_t userId, const std::string& friendName)
+uint64_t Database::BlockFriend(uint64_t userId, const std::string& friendName)
 {
     pqxx::work tx(conn_);
 
@@ -113,7 +116,10 @@ bool Database::BlockFriend(uint64_t userId, const std::string& friendName)
 
     tx.commit();
 
-    return !upd.empty();
+    if (upd.empty())
+        return 0; // 실패
+
+    return requesterId; // 성공 → 상대 id 반환
 }
 
 FriendList Database::GetFriendList(uint64_t userId)
@@ -144,6 +150,22 @@ FriendList Database::GetFriendList(uint64_t userId)
         else if (kind == "P") out.pending.push_back(name);
         else                  out.friends.push_back(name);
     }
+    return out;
+}
+
+std::vector<uint64_t> Database::GetFriendIds(uint64_t userId)
+{
+    pqxx::work tx(conn_);
+    pqxx::result r = tx.exec(
+        "SELECT CASE WHEN user_id = $1 THEN friend_id ELSE user_id END "
+        "FROM friendships "
+        "WHERE (user_id = $1 OR friend_id = $1) AND status = 'ACCEPTED'",
+        pqxx::params{ userId });
+    tx.commit();
+
+    std::vector<uint64_t> out;
+    for (const auto& row : r)
+        out.push_back(row[0].as<uint64_t>());
     return out;
 }
 
