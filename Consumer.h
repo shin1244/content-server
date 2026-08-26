@@ -27,6 +27,9 @@ private:
     void HandleFriendList(uint64_t senderId, std::istringstream& iss);
     void HandleFriendBroadcast(uint64_t senderId, const std::string& msg);
 
+    void HandleInventory(uint64_t senderId, std::istringstream& iss);
+    void ShowInventory(uint64_t senderId);
+
     void SendPacket(uint64_t sessionId, const Packet& pkt);
     void SendError(uint64_t sessionId, const std::string& msg);
 

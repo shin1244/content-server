@@ -62,6 +62,7 @@ void Consumer::Handle(Packet& pkt)
 
     if (cmd == "/w")        HandleWhisper(sessionId, iss);
     else if (cmd == "/f")   HandleFriend(sessionId, iss);
+    else if (cmd == "/i")   HandleInventory(sessionId, iss);
 }
 
 void Consumer::HandleNick(uint64_t sessionId, std::istringstream& iss)
@@ -278,6 +279,36 @@ void Consumer::HandleFriendBroadcast(uint64_t senderId, const std::string& msg)
         myUserId, reinterpret_cast<const char*>(&out), out.header.size);
 
     SendPacket(senderId, out);
+}
+
+void Consumer::HandleInventory(uint64_t senderId, std::istringstream& iss)
+{
+    std::string sub;
+    iss >> sub;
+
+    if (sub.empty())        ShowInventory(senderId);        // /i
+    //else if (sub == "enh")  HandleEnhance(senderId, iss);   // /i enh <id>
+    else SendError(senderId, "usage: /i | /i enh <itemId>");
+}
+
+void Consumer::ShowInventory(uint64_t senderId)
+{
+    int64_t userId = session_manager_->GetUserId(senderId);
+    try {
+        uint64_t gold = db_->GetGold(userId);
+        auto items = db_->GetItems(userId);
+
+        std::string msg = "gold: " + std::to_string(gold) + "\n-- items --\n";
+        for (const auto& s : items)
+            msg += "id=" + std::to_string(s.itemId)
+            + "  +" + std::to_string(s.enhanceLevel)
+            + "  power=" + std::to_string((long long)std::llround(s.power)) + "\n";
+        SendError(senderId, msg);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[DB] inventory failed: " << e.what() << "\n";
+        SendError(senderId, "server error");
+    }
 }
 
 void Consumer::SendPacket(uint64_t sessionId, const Packet& pkt)

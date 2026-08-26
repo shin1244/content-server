@@ -6,6 +6,7 @@
 struct Item {
     uint64_t itemId;
     int enhanceLevel;
+    int power;
 };
 
 struct FriendList {

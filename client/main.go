@@ -23,13 +23,43 @@ var commands = []Command{
 	{"/?", "도 움 말"},
 	{"/w", "귓 속 말"},
 	{"/f", "친 구"},
+	{"/i", "인 벤 토 리"},
+}
+
+// message 는 한 줄과 그 줄의 표시 스타일을 함께 담는다.
+type message struct {
+	text  string
+	style tcell.Style
+}
+
+var (
+	styleDefault = tcell.StyleDefault
+	styleFriend  = tcell.StyleDefault.Foreground(tcell.ColorOrange) // 친구 관련
+	styleItem    = tcell.StyleDefault.Foreground(tcell.ColorGreen)  // 인벤토리/거래 관련
+)
+
+// classify 는 메시지 내용의 키워드로 색 스타일을 고른다.
+func classify(text string) tcell.Style {
+	lower := strings.ToLower(text)
+
+	for _, kw := range []string{"friend", "request", "blocked", "reject", "accept", "block"} {
+		if strings.Contains(lower, kw) {
+			return styleFriend
+		}
+	}
+	for _, kw := range []string{"gold", "sword", "power", "enhanc", "inventory", "trade"} {
+		if strings.Contains(lower, kw) {
+			return styleItem
+		}
+	}
+	return styleDefault
 }
 
 type ChatUI struct {
 	screen tcell.Screen
 
 	mu       sync.Mutex
-	messages []string
+	messages []message
 	names    map[uint16]string // id -> 닉네임 (서버 스냅샷/델타로 채워짐)
 
 	input []rune
@@ -344,9 +374,13 @@ func (ui *ChatUI) getFilteredCommands() []Command {
 // Message
 // ============================================================
 
-func (ui *ChatUI) addMessage(message string) {
+func (ui *ChatUI) addMessage(raw string) {
 	ui.mu.Lock()
-	ui.messages = append(ui.messages, message)
+	raw = strings.TrimRight(raw, "\n")
+	for _, line := range strings.Split(raw, "\n") {
+		line = strings.TrimRight(line, "\r")
+		ui.messages = append(ui.messages, message{text: line, style: classify(line)})
+	}
 	ui.mu.Unlock()
 
 	ui.draw()
@@ -400,11 +434,12 @@ func (ui *ChatUI) draw() {
 			break
 		}
 
-		drawString(
+		drawStringWithStyle(
 			ui.screen,
 			0,
 			y,
-			ui.messages[i],
+			ui.messages[i].text,
+			ui.messages[i].style,
 		)
 
 		y++
