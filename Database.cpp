@@ -104,22 +104,23 @@ uint64_t Database::BlockFriend(uint64_t userId, const std::string& friendName)
         "SELECT user_id FROM users WHERE user_name = $1",
         pqxx::params{ friendName });
     if (found.empty())
-        return false;
+        return 0;
 
-    uint64_t requesterId = found[0][0].as<uint64_t>();
+    uint64_t targetId = found[0][0].as<uint64_t>();
+    if (targetId == userId)
+        return 0;
 
-    pqxx::result upd = tx.exec(
-        "UPDATE friendships SET status = 'BLOCK' "
-        "WHERE user_id = $1 AND friend_id = $2 AND status = 'PENDING' "
-        "RETURNING user_id",
-        pqxx::params{ requesterId, userId });
+    tx.exec(
+        "DELETE FROM friendships "
+        "WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)",
+        pqxx::params{ userId, targetId });
+
+    tx.exec(
+        "INSERT INTO friendships(user_id, friend_id, status) VALUES($1, $2, 'BLOCKED')",
+        pqxx::params{ userId, targetId });
 
     tx.commit();
-
-    if (upd.empty())
-        return 0; // 실패
-
-    return requesterId; // 성공 → 상대 id 반환
+    return targetId;
 }
 
 FriendList Database::GetFriendList(uint64_t userId)

@@ -17,6 +17,7 @@ private:
 
     void HandleNick(uint64_t sessionId, std::istringstream& iss);
     void HandleWhisper(uint64_t senderId, std::istringstream& iss);
+
     void HandleFriend(uint64_t senderId, std::istringstream& iss);
     void HandleFriendAdd(uint64_t senderId, std::istringstream& iss);
     void HandleFriendAccept(uint64_t senderId, std::istringstream& iss);
