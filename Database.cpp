@@ -93,6 +93,60 @@ bool Database::RejectFriend(uint64_t userId, const std::string& friendName)
     return !del.empty();
 }
 
+bool Database::BlockFriend(uint64_t userId, const std::string& friendName)
+{
+    pqxx::work tx(conn_);
+
+    pqxx::result found = tx.exec(
+        "SELECT user_id FROM users WHERE user_name = $1",
+        pqxx::params{ friendName });
+    if (found.empty())
+        return false;
+
+    uint64_t requesterId = found[0][0].as<uint64_t>();
+
+    pqxx::result upd = tx.exec(
+        "UPDATE friendships SET status = 'BLOCK' "
+        "WHERE user_id = $1 AND friend_id = $2 AND status = 'PENDING' "
+        "RETURNING user_id",
+        pqxx::params{ requesterId, userId });
+
+    tx.commit();
+
+    return !upd.empty();
+}
+
+FriendList Database::GetFriendList(uint64_t userId)
+{
+    pqxx::work tx(conn_);
+    pqxx::result r = tx.exec(
+        "SELECT 'B' AS kind, u.user_name "
+        "  FROM friendships f JOIN users u ON u.user_id = f.friend_id "
+        " WHERE f.user_id = $1 AND f.status = 'BLOCKED' "
+        "UNION ALL "
+        "SELECT 'P', u.user_name "
+        "  FROM friendships f JOIN users u ON u.user_id = f.user_id "
+        " WHERE f.friend_id = $1 AND f.status = 'PENDING' "
+        "UNION ALL "
+        "SELECT 'F', u.user_name "
+        "  FROM friendships f "
+        "  JOIN users u ON u.user_id = CASE WHEN f.user_id = $1 "
+        "                                   THEN f.friend_id ELSE f.user_id END "
+        " WHERE (f.user_id = $1 OR f.friend_id = $1) AND f.status = 'ACCEPTED'",
+        pqxx::params{ userId });
+    tx.commit();
+
+    FriendList out;
+    for (const auto& row : r) {
+        std::string kind = row[0].as<std::string>();
+        std::string name = row[1].as<std::string>();
+        if (kind == "B") out.blocked.push_back(name);
+        else if (kind == "P") out.pending.push_back(name);
+        else                  out.friends.push_back(name);
+    }
+    return out;
+}
+
 uint64_t Database::LoginOrRegister(const std::string& name)
 {
     pqxx::work tx(conn_);

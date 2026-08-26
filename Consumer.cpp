@@ -51,7 +51,7 @@ void Consumer::Handle(Packet& pkt)
         return;
     }
 
-    // ´Ğ³×ÀÓ ¼³Á¤ Àü¿¡´Â ´Ù¸¥ ¸í·É¾î ½ÇÇà ºÒ°¡
+    // ë‹‰ë„¤ì„ ì„¤ì • ì „ì—ëŠ” ë‹¤ë¥¸ ëª…ë ¹ì–´ ì‹¤í–‰ ë¶ˆê°€
     if (!session_manager_->IsNamed(sessionId))
     {
         SendError(sessionId, "name plz.");
@@ -106,7 +106,7 @@ void Consumer::HandleWhisper(uint64_t senderId, std::istringstream& iss)
     if (!(iss >> targetId)) return;
 
     std::string msg;
-    iss >> std::ws; // targetId ÀĞÀº ÈÄ ³²Àº ¾ÕÂÊ °ø¹é Á¦°Å
+    iss >> std::ws; // targetId ì½ì€ í›„ ë‚¨ì€ ì•ìª½ ê³µë°± ì œê±°
     std::getline(iss, msg);
 
     if (msg.empty()) return;
@@ -126,8 +126,8 @@ void Consumer::HandleFriend(uint64_t senderId, std::istringstream& iss)
     if (command == "add")    HandleFriendAdd(senderId, iss);
     else if (command == "accept") HandleFriendAccept(senderId, iss);
     else if (command == "reject") HandleFriendReject(senderId, iss);
-    //else if (command == "block")  HandleFriendBlock(senderId, iss);
-    //else if (command == "list")   HandleFriendList(senderId, iss);
+    else if (command == "block")  HandleFriendBlock(senderId, iss);
+    else if (command == "list")   HandleFriendList(senderId, iss);
     else SendError(senderId, "usage: /f add|accept|reject|block|list <name>");
 }
 
@@ -189,7 +189,58 @@ void Consumer::HandleFriendReject(uint64_t senderId, std::istringstream& iss)
         return;
     }
 
-    SendError(senderId, ok ? ("friend request sent: " + friendName) : "Accept failed");
+    SendError(senderId, ok ? ("friend request sent: " + friendName) : "Reject failed");
+}
+
+void Consumer::HandleFriendBlock(uint64_t senderId, std::istringstream& iss)
+{
+    std::string friendName;
+    iss >> friendName;
+    if (friendName.empty()) { SendError(senderId, "usage: /f block <name>"); return; }
+
+    uint64_t myUserId = session_manager_->GetUserId(senderId);
+    bool ok;
+    try {
+        ok = db_->BlockFriend(myUserId, friendName);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[DB] AddFriend failed: " << e.what() << "\n";
+        SendError(senderId, "server error");
+        return;
+    }
+
+    SendError(senderId, ok ? ("friend request sent: " + friendName) : "Block failed");
+}
+
+void Consumer::HandleFriendList(uint64_t senderId, std::istringstream& iss)
+{
+    std::string text;
+    iss >> text;
+    if (!text.empty()) { SendError(senderId, "usage: /f list"); return; }
+
+    uint64_t myUserId = session_manager_->GetUserId(senderId);
+
+    FriendList list;
+    try {
+        list = db_->GetFriendList(myUserId);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[DB] friend list failed: " << e.what() << "\n";
+        SendError(senderId, "server error");
+        return;
+    }
+
+    std::string msg;
+    msg += "Blocked\n";
+    for (const auto& n : list.blocked) msg += n + "\n";
+    msg += "----------------\n";
+    msg += "Request\n";
+    for (const auto& n : list.pending) msg += n + "\n";
+    msg += "----------------\n";
+    msg += "Friends\n";
+    for (const auto& n : list.friends) msg += n + "\n";
+
+    SendError(senderId, msg);
 }
 
 void Consumer::SendPacket(uint64_t sessionId, const Packet& pkt)
