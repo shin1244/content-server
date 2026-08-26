@@ -17,9 +17,8 @@ private:
 
     void HandleNick(uint64_t sessionId, std::istringstream& iss);
     void HandleWhisper(uint64_t senderId, std::istringstream& iss);
-
-    void HandleAddFriend(uint64_t senderId, std::istringstream& iss);
     void HandleFriend(uint64_t senderId, std::istringstream& iss);
+    void HandleFriendAdd(uint64_t senderId, std::istringstream& iss);
 
     void SendPacket(uint64_t sessionId, const Packet& pkt);
     void SendError(uint64_t sessionId, const std::string& msg);

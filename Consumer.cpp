@@ -59,7 +59,6 @@ void Consumer::Handle(Packet& pkt)
     }
 
     if (cmd == "/w")        HandleWhisper(sessionId, iss);
-    else if (cmd == "/add") HandleAddFriend(sessionId, iss);
     else if (cmd == "/f")   HandleFriend(sessionId, iss);
 }
 
@@ -119,11 +118,24 @@ void Consumer::HandleWhisper(uint64_t senderId, std::istringstream& iss)
     }
 }
 
-void Consumer::HandleAddFriend(uint64_t senderId, std::istringstream& iss)
+void Consumer::HandleFriend(uint64_t senderId, std::istringstream& iss)
+{
+    std::string command;
+    iss >> command;
+
+    if (command == "add")    HandleFriendAdd(senderId, iss);
+    //else if (command == "accept") HandleFriendAccept(senderId, iss);
+    //else if (command == "reject") HandleFriendReject(senderId, iss);
+    //else if (command == "block")  HandleFriendBlock(senderId, iss);
+    //else if (command == "list")   HandleFriendList(senderId, iss);
+    else SendError(senderId, "usage: /f add|accept|reject|block|list <name>");
+}
+
+void Consumer::HandleFriendAdd(uint64_t senderId, std::istringstream& iss)
 {
     std::string friendName;
     iss >> friendName;
-    if (friendName.empty()) { SendError(senderId, "usage: /add <name>"); return; }
+    if (friendName.empty()) { SendError(senderId, "usage: /f add <name>"); return; }
 
     uint64_t myUserId = session_manager_->GetUserId(senderId);
 
@@ -137,12 +149,7 @@ void Consumer::HandleAddFriend(uint64_t senderId, std::istringstream& iss)
         return;
     }
 
-    SendError(senderId, ok ? ("friend request sent: " + friendName)
-        : "add failed"); 
-}
-
-void Consumer::HandleFriend(uint64_t senderId, std::istringstream& iss)
-{
+    SendError(senderId, ok ? ("friend request sent: " + friendName) : "add failed");
 }
 
 void Consumer::SendPacket(uint64_t sessionId, const Packet& pkt)
