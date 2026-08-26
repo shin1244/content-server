@@ -38,6 +38,8 @@ void Consumer::Handle(Packet& pkt)
             return;
         }
         session_manager_->Broadcast(reinterpret_cast<char*>(&pkt), len);
+
+        RewardChat(sessionId);   // 골드 지급 + 아이템 드랍
         return;
     }
 
@@ -287,4 +289,27 @@ void Consumer::SendError(uint64_t sessionId, const std::string& msg)
 {
     Packet err = MakePacket(0, msg);
     SendPacket(sessionId, err);
+}
+
+void Consumer::RewardChat(uint64_t sessionId)
+{
+    uint64_t userId = session_manager_->GetUserId(sessionId);
+
+    // 동일 유저는 단일 스레드라 락 불필요
+    thread_local std::mt19937 rng{ std::random_device{}() };
+
+    uint64_t gold = std::uniform_int_distribution<int>(1, 10)(rng);
+
+    try {
+        db_->AddGold(userId, gold);
+
+        // 1/50 아이템 드랍
+        if (std::uniform_int_distribution<int>(1, 50)(rng) == 1) {
+            uint64_t itemId = db_->DropItem(userId);
+            SendError(sessionId, "item dropped! id=" + std::to_string(itemId));
+        }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[DB] chat reward failed: " << e.what() << "\n";
+    }
 }

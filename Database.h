@@ -3,6 +3,11 @@
 #include <cstdint>
 #include <pqxx/pqxx>
 
+struct Item {
+    uint64_t itemId;
+    int enhanceLevel;
+};
+
 struct FriendList {
     std::vector<std::string> blocked;
     std::vector<std::string> pending;
@@ -21,8 +26,12 @@ public:
     uint64_t BlockFriend(uint64_t userId, const std::string& friendName);
     FriendList GetFriendList(uint64_t userId);
     std::vector<uint64_t> GetFriendIds(uint64_t userId);
-    
     uint64_t LoginOrRegister(const std::string& name);
+
+    uint64_t GetGold(uint64_t userId);
+    uint64_t AddGold(uint64_t userId, uint64_t amount);
+    uint64_t DropItem(uint64_t userId);
+    std::vector<Item> GetItems(uint64_t userId);
 
 private:
     pqxx::connection conn_;

@@ -183,3 +183,47 @@ uint64_t Database::LoginOrRegister(const std::string& name)
     tx.commit();
     return r[0].as<uint64_t>();
 }
+
+uint64_t Database::GetGold(uint64_t userId)
+{
+    pqxx::work tx(conn_);
+    pqxx::row r = tx.exec(
+        "SELECT gold FROM users WHERE user_id = $1",
+        pqxx::params{ userId }).one_row();
+    tx.commit();
+    return r[0].as<uint64_t>();
+}
+
+uint64_t Database::AddGold(uint64_t userId, uint64_t amount)
+{
+    pqxx::work tx(conn_);
+    pqxx::row r = tx.exec(
+        "UPDATE users SET gold = gold + $2 WHERE user_id = $1 RETURNING gold",
+        pqxx::params{ userId, amount }).one_row();
+    tx.commit();
+    return r[0].as<uint64_t>();
+}
+
+uint64_t Database::DropItem(uint64_t userId)
+{
+    pqxx::work tx(conn_);
+    pqxx::row r = tx.exec(
+        "INSERT INTO items(owner_id) VALUES($1) RETURNING item_id",
+        pqxx::params{ userId }).one_row();
+    tx.commit();
+    return r[0].as<uint64_t>();
+}
+
+std::vector<Item> Database::GetItems(uint64_t userId)
+{
+    pqxx::work tx(conn_);
+    pqxx::result r = tx.exec(
+        "SELECT item_id, enhance_level FROM items WHERE owner_id = $1 ORDER BY item_id",
+        pqxx::params{ userId });
+    tx.commit();
+
+    std::vector<Item> out;
+    for (const auto& row : r)
+        out.push_back({ row[0].as<uint64_t>(), row[1].as<int>() });
+    return out;
+}

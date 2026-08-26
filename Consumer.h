@@ -4,6 +4,7 @@
 #include "PacketHandler.h"
 #include "Protocol.h" 
 #include "Database.h"
+#include <random>
 
 class Consumer
 {
@@ -28,6 +29,8 @@ private:
 
     void SendPacket(uint64_t sessionId, const Packet& pkt);
     void SendError(uint64_t sessionId, const std::string& msg);
+
+    void RewardChat(uint64_t sessionId);
 
     Database* db_ = nullptr;
     MPMCQueue<Packet>* queue_ = nullptr;
