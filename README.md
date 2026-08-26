@@ -209,6 +209,32 @@ AI에게 질문해 실무에서 사용하는 자료구조에 대한 정보를 �
   - `friendships`에 **`UNIQUE(user_id, friend_id)` 제약** 추가(없으면 `ON CONFLICT` 런타임 에러).
   - `/f`(친구 수락/목록) 미구현.
 
+### 2026-08-26 — 친구 완성 · 샤딩(1단계) · 인벤토리 진입
+
+**친구 기능 완성 (`/f` 서브커맨드로 통합)**
+- `/add` 폐지 → `/f add|accept|reject|block|list`로 통일. 매칭 안 되면 나머지를 **친구 전체 채팅**으로. (노트 21)
+- 수락/거절/차단: `AcceptFriend`(PENDING→ACCEPTED, 상대 id 반환), `RejectFriend`(행 삭제=재요청 허용), `BlockFriend`(기존 관계 정리 후 `(나→상대) BLOCKED` upsert).
+- `/f list`: 차단/받은요청/친구를 **UNION ALL 한 쿼리**로 (섹션별 JOIN 방향이 다름 — 차단=내가 user_id, 요청=상대가 user_id, 친구=CASE로 "내가 아닌 쪽").
+- **block 버그 3종 수정**: status 상수(`BLOCK`≠`BLOCKED`) / `PENDING`일 때만 걸림 / 방향 반대 → **DELETE 후 BLOCKED INSERT**로 통일해 캐시 desync까지 해결. (노트 21)
+
+**온라인 친구 캐시 (노트 19 설계 구현)**
+- `Session::friendIds_`(**user_id** 집합, sessionId 아님 = 재접속 무효화 회피). 로그인 시 `GetFriendIds`→`LoadFriendCache`.
+- `SessionManager`에 `byUserId_`(userId→sessionId) + `CacheAddFriend`/`CacheRemoveFriend`/`AreFriends`(전부 락 안, **userId 기준** → 상대 오프라인이면 자동 no-op).
+- 캐시 무효화: 관계가 실제로 바뀌는 **accept/block만 양방향 갱신**, add/reject는 캐시 무관.
+
+**샤딩 (1단계) — 유저별 스레드 친화성 (노트 22)**
+- 단일 컨슈머 → **N 샤드**. 샤드 = { 큐 + Consumer 스레드 + Database(커넥션) }. `Create`가 `sessionId % N`으로 큐 배정 → **한 유저는 항상 같은 컨슈머**(순서 보장 + 유저 상태 락-프리).
+- `SessionManager`가 큐 소유(`shardQueues_`), `ShardServer`가 DB·Consumer 소유. `NetworkCore`에서 큐 의존 제거.
+- pqxx 커넥션 비(非)스레드안전 → **샤드마다 커넥션 하나**로 자연 해결.
+
+**인벤토리 진입 (스키마 + 채팅 훅)**
+- 스키마: `items(item_id, owner_id FK, enhance_level, power, created_at)` + `users.gold`. 검=**고유 인스턴스**(스택 아님), 강화가 랜덤 배율이라 `power`를 **저장** 필수(레벨로 역산 불가). (노트 23)
+- `AddGold`/`DropSword`/`GetSwords`/`GetGold`. 채팅마다 골드 1~10 + **1/50 검 드랍**(`thread_local mt19937`, 샤드=단일스레드라 락 없음).
+- `/i` 인벤토리 보기 + `/i enh <id>` 강화(+20~25%, `owner_id` 소유 검증). 골드/검은 hot read가 없어 **캐시 없이 DB 직접**.
+
+**Go 클라이언트**
+- 여러 줄 메시지 **줄바꿈**(`\n` 분리 후 줄마다 렌더) + **카테고리 색상**(친구=주황 / 인벤·거래=초록, 키워드 분류).
+
 ## TODO / 남은 이슈
 
 ### 논의됨, 아직 미적용 (리팩터링)
