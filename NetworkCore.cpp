@@ -1,13 +1,12 @@
 #include "NetworkCore.h"
 
-bool NetworkCore::Start(uint16_t port, MPMCQueue<Packet>* h)
+bool NetworkCore::Start(uint16_t port)
 {
     WSADATA wsa;
     if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
         std::cout << "WSAStartup failed\n";
         return false;
     }
-    ph_ = h;
     if (!InitSocket(port)) return false;
     if (!LoadExtensionFns()) return false;
     if (!InitIOCP())       return false;
@@ -205,7 +204,7 @@ void NetworkCore::OnAcceptComplete(AcceptContext* ctx)
     setsockopt(clientSocket, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
         (char*)&listenSocket_, sizeof(listenSocket_));
 
-    Session* session = sessions_->Create(clientSocket, ph_);
+    Session* session = sessions_->Create(clientSocket);
     if (!session) { closesocket(clientSocket); PostAccept(ctx); return; }
 
     CreateIoCompletionPort((HANDLE)clientSocket, iocp_,

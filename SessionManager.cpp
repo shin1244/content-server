@@ -1,15 +1,24 @@
 #include "SessionManager.h"
 
-Session* SessionManager::Create(SOCKET sock, MPMCQueue<Packet>* h)
+Session* SessionManager::Create(SOCKET sock)
 {
 	std::unique_lock g(lock_);
 	int index = pool_.Alloc();
 	if (index == -1) return nullptr;
 	Session* s = &pool_[index];
 	uint64_t id = nextId_.fetch_add(1);
-	s->Init(sock, index, id, h);
+
+	MPMCQueue<Packet>* q = shardQueues_[id % shardQueues_.size()].get();
+	s->Init(sock, index, id, q);
+
 	byId_[id] = s;
 	return s;
+}
+
+void SessionManager::InitShards(size_t n)
+{
+	for (size_t i = 0; i < n; ++i)
+		shardQueues_.push_back(std::make_unique<MPMCQueue<Packet>>());
 }
 
 void SessionManager::Destroy(Session* s)

@@ -5,7 +5,7 @@ void Consumer::Start(MPMCQueue<Packet>* queue, SessionManager* sessions, Databas
 {
     queue_ = queue;
     session_manager_ = sessions;
-    db_ = db;
+    db_ = db; 
 
     thread_ = std::thread([this] { Loop(); });
 }

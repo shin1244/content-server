@@ -3,9 +3,11 @@
 #include <shared_mutex>
 #include "Session.h"
 #include <atomic>
-
+#include <memory>
 #include "MPMCQueue.h"
 #include "ObjectPool.h"
+
+
 
 class SessionManager {
 private:
@@ -15,8 +17,12 @@ private:
     std::unordered_map<uint64_t, uint64_t> byUserId_;
     std::atomic<uint64_t> nextId_{1};
     ObjectPool<Session, 1000> pool_;
+    std::vector<std::unique_ptr<MPMCQueue<Packet>>> shardQueues_;
 public:
-    Session* Create(SOCKET sock, MPMCQueue<Packet>* h);
+    Session* Create(SOCKET sock);
+    void InitShards(size_t n);
+    MPMCQueue<Packet>* GetQueue(size_t i) { return shardQueues_[i].get(); }
+    size_t ShardCount() const { return shardQueues_.size(); }
     void Destroy(Session* s);
     void Broadcast(char* data, int len);
     bool SendTo(uint64_t id, const char* data, int len);

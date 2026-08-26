@@ -32,7 +32,7 @@ bool Database::AddFriend(uint64_t userId, const std::string& friendName)
         return false;
 
     uint64_t friendId = found[0][0].as<uint64_t>();
-
+    
     if (friendId == userId)
         return false;
 

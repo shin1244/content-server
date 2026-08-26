@@ -14,7 +14,7 @@ class NetworkCore {
 public:
     NetworkCore(SessionManager* sessionManager) : sessions_(sessionManager) {}
     ~NetworkCore() { Stop(); }
-    bool Start(uint16_t port, MPMCQueue<Packet>* h);
+    bool Start(uint16_t port);
     void Stop();
     void Broadcast(char* data, int len) { sessions_->Broadcast(data, len); }
     bool SendTo(uint64_t id, const char* data, int len) { return sessions_->SendTo(id, data, len); }
@@ -40,6 +40,4 @@ private:
     SessionManager* sessions_;
     LPFN_ACCEPTEX fnAcceptEx_ = nullptr;
     std::vector<std::thread> workers_;
-
-    MPMCQueue<Packet>* ph_ = nullptr;
 };

@@ -6,6 +6,7 @@
 #include "Consumer.h"
 #include "Database.h"
 #include <iostream>
+#include "ShardServer.h"
 
 int main()
 {
@@ -15,32 +16,16 @@ int main()
         return 1;
     }
 
-    std::unique_ptr<Database> db;
-    try {
-        db = std::make_unique<Database>(dsnEnv);
-        if (db->Ping()) {
-            std::cout << "[DB] ping OK\n";
-        }
-    }
-    catch (const std::exception& e) {
-        std::cerr << "[DB] connect failed: " << e.what() << "\n";
-        return 1;
-    }
-
     SessionManager sessions;
-    MPMCQueue<Packet> queue;
     NetworkCore core(&sessions);
-    Consumer consumer;
+    ShardServer shards;
 
-    core.Start(5050, &queue);
-
-    consumer.Start(&queue, &sessions, db.get());
+    shards.Start(8, dsnEnv, &sessions);
+    core.Start(5050);
 
     std::cout << "[Server] Press Enter to shutdown...\n";
     std::cin.get(); 
 
-    // 서버 종료 처리
-    consumer.Stop();
-
+    shards.Stop();
     return 0;
 }
