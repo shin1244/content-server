@@ -36,6 +36,7 @@ public:
 
     void SetUserId(uint64_t userId) { userId_ = userId; }
     uint64_t GetUserId() { return userId_; }
+    std::unordered_set<uint64_t> GetFriends() { return friendIds_; }
 
     void addFriend(uint64_t friendId);
     void removeFriend(uint64_t friendId);

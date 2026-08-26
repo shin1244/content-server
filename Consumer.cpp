@@ -131,7 +131,11 @@ void Consumer::HandleFriend(uint64_t senderId, std::istringstream& iss)
     else if (command == "reject") HandleFriendReject(senderId, iss);
     else if (command == "block")  HandleFriendBlock(senderId, iss);
     else if (command == "list")   HandleFriendList(senderId, iss);
-    else SendError(senderId, "usage: /f add|accept|reject|block|list <name>");
+    else {
+        std::string rest;
+        std::getline(iss, rest);           
+        HandleFriendBroadcast(senderId, command + rest); 
+    }
 }
 
 void Consumer::HandleFriendAdd(uint64_t senderId, std::istringstream& iss)
@@ -256,6 +260,22 @@ void Consumer::HandleFriendList(uint64_t senderId, std::istringstream& iss)
     for (const auto& n : list.friends) msg += n + "\n";
 
     SendError(senderId, msg);
+}
+
+void Consumer::HandleFriendBroadcast(uint64_t senderId, const std::string& msg)
+{
+    if (msg.empty()) {
+        SendError(senderId, "usage: /f <text> | add | accept | reject | block | list");
+        return;
+    }
+
+    uint64_t myUserId = session_manager_->GetUserId(senderId);
+
+    Packet out = MakePacket(senderId, msg);
+    session_manager_->SendToFriends(
+        myUserId, reinterpret_cast<const char*>(&out), out.header.size);
+
+    SendPacket(senderId, out);
 }
 
 void Consumer::SendPacket(uint64_t sessionId, const Packet& pkt)

@@ -39,6 +39,27 @@ bool SessionManager::SendTo(uint64_t id, const char* data, int len)
 	return true;
 }
 
+void SessionManager::SendToFriends(uint64_t userId, const char* data, int len)
+{
+	std::shared_lock g(lock_);
+
+	// 1. 보낸 사람 세션 찾기 → friend set 얻기
+	auto it = byUserId_.find(userId);
+	if (it == byUserId_.end()) return;
+	auto sit = byId_.find(it->second);
+	if (sit == byId_.end()) return;
+
+	// 2. 내 친구 set만 순회 (전체 유저 아님)
+	for (uint64_t fid : sit->second->GetFriends())   // set을 const ref로 반환하는 접근자
+	{
+		auto fit = byUserId_.find(fid);
+		if (fit == byUserId_.end()) continue;        // 그 친구 오프라인 → 건너뜀
+		auto fsit = byId_.find(fit->second);
+		if (fsit == byId_.end()) continue;
+		fsit->second->Send(data, len);               // SendTo 아님! Send 직접 호출
+	}
+}
+
 bool SessionManager::IsNamed(uint64_t id)
 {
 	std::shared_lock g(lock_);

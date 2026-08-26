@@ -23,6 +23,7 @@ private:
     void HandleFriendReject(uint64_t senderId, std::istringstream& iss);
     void HandleFriendBlock(uint64_t senderId, std::istringstream& iss);
     void HandleFriendList(uint64_t senderId, std::istringstream& iss);
+    void HandleFriendBroadcast(uint64_t senderId, const std::string& msg);
 
     void SendPacket(uint64_t sessionId, const Packet& pkt);
     void SendError(uint64_t sessionId, const std::string& msg);

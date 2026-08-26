@@ -20,6 +20,7 @@ public:
     void Destroy(Session* s);
     void Broadcast(char* data, int len);
     bool SendTo(uint64_t id, const char* data, int len);
+    void SendToFriends(uint64_t userId, const char* data, int len);
     bool IsNamed(uint64_t id);
     bool SetName(uint64_t id, std::string name);
     void SendRosterTo(uint64_t id);
