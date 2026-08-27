@@ -287,7 +287,7 @@ void Consumer::HandleInventory(uint64_t senderId, std::istringstream& iss)
     iss >> sub;
 
     if (sub.empty())        ShowInventory(senderId);        // /i
-    //else if (sub == "enh")  HandleEnhance(senderId, iss);   // /i enh <id>
+    else if (sub == "enh")  HandleEnhance(senderId, iss);   // /i enh <id>
     else SendError(senderId, "usage: /i | /i enh <itemId>");
 }
 
@@ -298,11 +298,18 @@ void Consumer::ShowInventory(uint64_t senderId)
         uint64_t gold = db_->GetGold(userId);
         auto items = db_->GetItems(userId);
 
-        std::string msg = "gold: " + std::to_string(gold) + "\n-- items --\n";
-        for (const auto& s : items)
-            msg += "id=" + std::to_string(s.itemId)
-            + "  +" + std::to_string(s.enhanceLevel)
-            + "  power=" + std::to_string((long long)std::llround(s.power)) + "\n";
+        int64_t totalPower = 0;
+        std::string body;
+        for (const auto& s : items) {
+            body += "id=" + std::to_string(s.itemId)
+                + "  +" + std::to_string(s.enhanceLevel)
+                + "  power=" + std::to_string(s.power) + "\n";
+            totalPower += s.power;
+        }
+
+        std::string msg = "gold: " + std::to_string(gold)
+            + "\ntotal power: " + std::to_string(totalPower)
+            + "\n-- items --\n" + body;
         SendError(senderId, msg);
     }
     catch (const std::exception& e) {
@@ -310,6 +317,60 @@ void Consumer::ShowInventory(uint64_t senderId)
         SendError(senderId, "server error");
     }
 }
+
+void Consumer::HandleEnhance(uint64_t senderId, std::istringstream& iss)
+{
+    uint64_t itemId = 0;
+    if (!(iss >> itemId)) { SendError(senderId, "usage: /i enh <itemId>"); return; }
+
+    uint64_t userId = session_manager_->GetUserId(senderId);
+
+    thread_local std::mt19937 rng{ std::random_device{}() };
+
+    try {
+        auto item = db_->GetItem(userId, itemId);
+        if (!item) { SendError(senderId, "no such item"); return; }
+
+        const int cost = 100 * (item->enhanceLevel + 1);
+        const int rate = std::max<int>(20, 100 - item->enhanceLevel * 5);
+
+        const bool success = std::uniform_int_distribution<int>(1, 100)(rng) <= rate;
+        const double mult = success
+            ? std::uniform_real_distribution<double>(1.20, 1.25)(rng)
+            : 1.0;
+
+        EnhanceResult r = db_->EnhanceItem(userId, itemId, cost, success, mult);
+
+        switch (r.status)
+        {
+        case EnhanceResult::Status::NoGold:
+            SendError(senderId, "not enough gold (need " + std::to_string(cost) + ")");
+            break;
+
+        case EnhanceResult::Status::NotOwned:
+            SendError(senderId, "no such item");
+            break;
+
+        case EnhanceResult::Status::Success:
+            SendError(senderId, "enhance success!  +" + std::to_string(r.enhanceLevel)
+                + "  power=" + std::to_string(r.power)
+                + "  gold=" + std::to_string(r.gold));
+            break;
+
+        case EnhanceResult::Status::Failed:
+            SendError(senderId, "enhance failed...  +" + std::to_string(r.enhanceLevel)
+                + "  power=" + std::to_string(r.power)
+                + "  gold=" + std::to_string(r.gold));
+            break;
+        }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[DB] enhance failed: " << e.what() << "\n";
+        SendError(senderId, "server error");
+    }
+}
+
+
 
 void Consumer::SendPacket(uint64_t sessionId, const Packet& pkt)
 {

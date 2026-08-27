@@ -218,12 +218,62 @@ std::vector<Item> Database::GetItems(uint64_t userId)
 {
     pqxx::work tx(conn_);
     pqxx::result r = tx.exec(
-        "SELECT item_id, enhance_level FROM items WHERE owner_id = $1 ORDER BY item_id",
+        "SELECT item_id, enhance_level, power FROM items WHERE owner_id = $1 ORDER BY item_id",
         pqxx::params{ userId });
     tx.commit();
 
     std::vector<Item> out;
     for (const auto& row : r)
-        out.push_back({ row[0].as<uint64_t>(), row[1].as<int>() });
+        out.push_back({ row[0].as<uint64_t>(), row[1].as<int>(), row[2].as<int>() });
     return out;
+}
+
+std::optional<Item> Database::GetItem(uint64_t userId, uint64_t itemId)
+{
+    pqxx::work tx(conn_);
+    pqxx::result r = tx.exec(
+        "SELECT enhance_level, power FROM items "
+        "WHERE owner_id = $1 AND item_id = $2",
+        pqxx::params{ userId, itemId });
+    tx.commit();
+
+    if (r.empty()) return std::nullopt;      // 내 아이템이 아니거나 없음
+
+    return Item{ itemId, r[0][0].as<int>(), r[0][1].as<int>() };
+}
+
+EnhanceResult Database::EnhanceItem(uint64_t userId, uint64_t itemId,
+    uint64_t cost, bool success, double mult)
+{
+    pqxx::work tx(conn_);
+
+    pqxx::result g = tx.exec(
+        "UPDATE users SET gold = gold - $2 "
+        "WHERE user_id = $1 AND gold >= $2 "
+        "RETURNING gold",
+        pqxx::params{ userId, cost });
+
+    if (g.empty())
+        return { EnhanceResult::Status::NoGold, 0, 0, 0 };
+
+    pqxx::result it = tx.exec(
+        "UPDATE items "
+        "SET enhance_level = enhance_level + $3, "
+        "    power         = ROUND(power * $4::float8)::int "
+        "WHERE owner_id = $1 AND item_id = $2 "
+        "RETURNING enhance_level, power",
+        pqxx::params{ userId, itemId, success ? 1 : 0, mult });
+
+    if (it.empty())
+        return { EnhanceResult::Status::NotOwned, 0, 0, 0 };
+
+    tx.commit();
+
+    return {
+        success ? EnhanceResult::Status::Success
+                : EnhanceResult::Status::Failed,
+        it[0][0].as<int>(),
+        it[0][1].as<int>(),
+        g[0][0].as<uint64_t>()
+    };
 }
