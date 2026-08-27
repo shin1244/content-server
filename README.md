@@ -41,9 +41,33 @@ IOCP 기반 비동기 TCP 채팅 서버를 베이스로, "이런 간단해 보�
 채팅 활동에 대한 보상 재화. 검은 강화 배율이 랜덤이라 스택이 아닌 **고유 인스턴스**로 저장합니다.
 
 - ✅ **골드 / 아이템 드랍** — 채팅할 때마다 골드 1~10 지급 + 1/50 확률로 검 드랍.
-- ✅ **인벤토리 보기 (`/i`)** — 보유 골드와 검 목록(id / 강화수치 / power) 출력.
-- ✅ **스키마** — `items(item_id, owner_id, enhance_level, power, created_at)` + `users.gold`. power를 저장(레벨로 역산 불가).
-- 🚧 **강화 (`/i enh <itemId>`)** — 소유 검증 후 +20~25% 랜덤 강화. 코어 구현 중.
+- ✅ **인벤토리 보기 (`/i`)** — 보유 골드, 총 전투력, 검 목록(id / 강화수치 / power) 출력.
+- ✅ **강화 (`/i enh <itemId>`)** — 골드를 소모해 검을 강화. 성공 시 `power × 1.20~1.25`, 레벨 +1. 실패해도 골드는 소모되고 검은 그대로(파괴 없음).
+  - 비용 `100 × (레벨+1)`, 성공률 `max(20, 100 - 레벨×5)`% — 레벨이 오를수록 비싸지고 어려워짐
+  - 난수는 컨슈머에서 굴리고 **배율·성공여부를 파라미터로 내려** DB는 SQL만 담당
+- ✅ **스키마** — `items(item_id, owner_id, enhance_level, power, created_at)` + `users.gold`. power를 저장(강화 배율이 랜덤이라 레벨로 역산 불가).
+
+### 설계 노트 — 강화의 원자성
+
+강화의 진짜 주제는 확률이 아니라 **read-modify-write**입니다. "잔액 확인 → 차감", "소유 확인 → 적용"으로 나누면 그 사이가 TOCTOU 창이 돼요. 그래서 **검증을 전부 `WHERE` 절 안으로** 넣고 영향 행 수로 판정합니다.
+
+```sql
+-- 잔액 가드
+UPDATE users SET gold = gold - $2
+WHERE user_id = $1 AND gold >= $2 RETURNING gold;      -- 0행 → NoGold
+
+-- 소유 가드
+UPDATE items SET enhance_level = enhance_level + $3,
+                 power = ROUND(power * $4::float8)::int
+WHERE owner_id = $1 AND item_id = $2
+RETURNING enhance_level, power;                        -- 0행 → NotOwned
+```
+
+- **두 UPDATE를 한 트랜잭션에** — 아이템 검증이 실패하면 골드 차감이 자동 롤백. 덕분에 "먼저 검증하고 차감"이라는 **순서 고민 자체가 사라짐**. `pqxx::work`는 커밋 없이 소멸하면 abort하므로 early return이 곧 롤백.
+- **소유 검증은 동시성이 아니라 신뢰 경계** — 샤드 친화성 덕에 내 아이템 행을 두 스레드가 동시에 건드릴 일은 없다. `WHERE owner_id = $1`이 막는 건 **클라가 남의 `item_id`를 찍어 보내는 것**(노트 7). 거래가 들어오면 그때 같은 절이 동시성 가드로도 일하기 시작한다.
+- **가격 조회와 권한 판정의 분리** — 비용·성공률이 `enhance_level`에 의존해 `GetItem`을 한 번 읽지만, 이건 **가격 책정용(참고)**이고 authoritative한 판정은 여전히 `WHERE`에 있다. 값이 낡아도 최악은 가격이 한 단계 어긋나는 것이지 무단 강화가 아니다.
+- **결과는 sentinel이 아니라 타입으로** — 결과가 4종(Success/Failed/NotOwned/NoGold)이라 `bool`로 부족. `EnhanceResult` struct + `GetItem`은 `std::optional`. `0`을 실패로 쓰는 sentinel은 호출부가 규칙을 기억해야 하지만, 이쪽은 컴파일러가 강제한다.
+- **libpqxx 함정** — `power * $4`에서 `power`가 `integer`라 Postgres가 `integer * integer`로 추론해 `"1.23"` 파싱에 실패한다. `$4::float8` 명시적 캐스트로 추론을 고정해야 함.
 
 ## 4. 랭킹
 
