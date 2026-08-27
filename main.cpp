@@ -16,6 +16,13 @@ int main()
         return 1;
     }
 
+    const char* redisEnv = std::getenv("SERVER_REDIS_URL");
+
+    if (!redisEnv) {
+        std::cerr << "[Error] SERVER_REDIS_URL 환경변수가 설정되지 않았습니다.\n";
+        return 1;
+    }
+
     SessionManager sessions;
     NetworkCore core(&sessions);
     ShardServer shards;

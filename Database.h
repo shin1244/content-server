@@ -9,6 +9,8 @@ struct Item {
     int power;
 };
 
+struct DropResult { uint64_t itemId; uint64_t totalPower; };
+
 struct EnhanceResult
 {
     enum class Status { Success, Failed, NotOwned, NoGold };
@@ -16,7 +18,8 @@ struct EnhanceResult
     Status   status;
     int      enhanceLevel;
     int      power;
-    uint64_t gold; 
+    uint64_t gold;
+    uint64_t  totalPower;
 };
 
 struct FriendList {
@@ -41,7 +44,7 @@ public:
 
     uint64_t GetGold(uint64_t userId);
     uint64_t AddGold(uint64_t userId, uint64_t amount);
-    uint64_t DropItem(uint64_t userId);
+    DropResult DropItem(uint64_t userId);
     std::vector<Item> GetItems(uint64_t userId);
     std::optional<Item> GetItem(uint64_t userId, uint64_t itemId);
     EnhanceResult EnhanceItem(uint64_t userId, uint64_t itemId,

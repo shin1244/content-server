@@ -204,14 +204,20 @@ uint64_t Database::AddGold(uint64_t userId, uint64_t amount)
     return r[0].as<uint64_t>();
 }
 
-uint64_t Database::DropItem(uint64_t userId)
+DropResult Database::DropItem(uint64_t userId)
 {
     pqxx::work tx(conn_);
     pqxx::row r = tx.exec(
         "INSERT INTO items(owner_id) VALUES($1) RETURNING item_id",
         pqxx::params{ userId }).one_row();
+
+    pqxx::row tp = tx.exec(
+        "SELECT COALESCE(SUM(power), 0) FROM items WHERE owner_id = $1",
+        pqxx::params{ userId }).one_row();
+
     tx.commit();
-    return r[0].as<uint64_t>();
+
+    return { r[0].as<uint64_t>(), tp[0].as<uint64_t>() };
 }
 
 std::vector<Item> Database::GetItems(uint64_t userId)
@@ -267,6 +273,12 @@ EnhanceResult Database::EnhanceItem(uint64_t userId, uint64_t itemId,
     if (it.empty())
         return { EnhanceResult::Status::NotOwned, 0, 0, 0 };
 
+    // 총 전투력 합계 계산
+    pqxx::row t = tx.exec(
+        "SELECT COALESCE(SUM(power), 0) FROM items WHERE owner_id = $1",
+        pqxx::params{ userId }).one_row();
+
+    // 트랜잭션 하나
     tx.commit();
 
     return {
@@ -274,6 +286,7 @@ EnhanceResult Database::EnhanceItem(uint64_t userId, uint64_t itemId,
                 : EnhanceResult::Status::Failed,
         it[0][0].as<int>(),
         it[0][1].as<int>(),
-        g[0][0].as<uint64_t>()
+        g[0][0].as<uint64_t>(),
+        t[0].as<uint64_t>()
     };
 }

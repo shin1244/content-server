@@ -354,7 +354,8 @@ void Consumer::HandleEnhance(uint64_t senderId, std::istringstream& iss)
         case EnhanceResult::Status::Success:
             SendError(senderId, "enhance success!  +" + std::to_string(r.enhanceLevel)
                 + "  power=" + std::to_string(r.power)
-                + "  gold=" + std::to_string(r.gold));
+                + "  gold=" + std::to_string(r.gold)
+                + "  total=" + std::to_string(r.totalPower));
             break;
 
         case EnhanceResult::Status::Failed:
@@ -397,8 +398,9 @@ void Consumer::RewardChat(uint64_t sessionId)
 
         // 1/50 아이템 드랍
         if (std::uniform_int_distribution<int>(1, 50)(rng) == 1) {
-            uint64_t itemId = db_->DropItem(userId);
-            SendError(sessionId, "item dropped! id=" + std::to_string(itemId));
+            DropResult item = db_->DropItem(userId);
+            SendError(sessionId, "item dropped! id=" + std::to_string(item.itemId)
+            + " total power=" + std::to_string(item.totalPower));
         }
     }
     catch (const std::exception& e) {
