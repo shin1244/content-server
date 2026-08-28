@@ -69,6 +69,18 @@ RETURNING enhance_level, power;                        -- 0행 → NotOwned
 - **결과는 sentinel이 아니라 타입으로** — 결과가 4종(Success/Failed/NotOwned/NoGold)이라 `bool`로 부족. `EnhanceResult` struct + `GetItem`은 `std::optional`. `0`을 실패로 쓰는 sentinel은 호출부가 규칙을 기억해야 하지만, 이쪽은 컴파일러가 강제한다.
 - **libpqxx 함정** — `power * $4`에서 `power`가 `integer`라 Postgres가 `integer * integer`로 추론해 `"1.23"` 파싱에 실패한다. `$4::float8` 명시적 캐스트로 추론을 고정해야 함.
 
+### 설계 노트 — 무엇을 즉시 저장하나
+
+"RAM에 들고 주기적으로 flush, 종료 시 DB"는 MMO의 흔한 패턴이고 **배타적 소유**가 전제다. 샤드 친화성 덕에 이 프로젝트도 조건은 갖췄지만 아이템은 예외로 뒀다 — 크래시 시 진행 소실이 CS 비용으로 직결되고, "넘긴 쪽만 롤백돼 아이템이 둘로 늘어나는" 복제 버그의 고전적 원인이기 때문. 게다가 다음 컨텐츠인 **거래는 서로 다른 샤드의 두 유저**를 건드려서, 상태가 RAM에 있으면 크로스 샤드 코디네이션이 필요해진다. DB가 진실이면 트랜잭션 하나로 끝난다.
+
+| 데이터 | 전략 |
+|---|---|
+| 아이템 획득 · 강화 · 거래 | 즉시 DB 트랜잭션 |
+| 골드 | 즉시 DB (쓰기가 잦고 덜 치명적이라 배칭 후보) |
+| 랭킹 점수 | Redis 파생 캐시, 실패 허용 |
+
+느린 게 걱정이면 답은 "덜 저장하기"가 아니라 **"저장을 논블로킹으로"** 다. 강화 한 번이 DB 왕복 2회 + Redis 1회를 **샤드 스레드에서 동기로** 도는 게 실제 병목이고, 원격 DB라 왕복이 비싸 체감도 크다.
+
 ## 4. 랭킹
 
 읽기 폭주 / 쓰기 소수의 비대칭 부하가 주제. **Redis Sorted Set**으로 처리한다 — `ZREVRANK`가 O(log N)이라 "내 순위 몇 등?"이 싸다(SQL이면 전체에 window function).
@@ -76,10 +88,11 @@ RETURNING enhance_level, power;                        -- 0행 → NotOwned
 - ✅ **Redis 연결** — `SERVER_REDIS_URL`(DSN과 같은 방식)로 접속. redis-plus-plus(vcpkg).
 - ✅ **총 전투력 산출** — `EnhanceItem`/`DropItem`이 변경 후 총합을 함께 반환. "아이템을 바꾸는 DB 함수는 바뀐 총합을 돌려준다"는 규칙.
 - ✅ **`Ranking` 클래스** — `Update`(ZADD) / `Top`(ZREVRANGE) / `RankOf`(ZREVRANK) / `Rebuild`.
-- 🚧 **배선** — `ShardServer` → `Consumer`에 `Ranking*` 주입
+- ✅ **배선** — `main`이 `Ranking` 하나 소유 → `ShardServer` → 전 `Consumer`에 포인터 주입.
+- ✅ **훅 2개** — 강화 **성공 시**와 검 드랍 시에만 `Update`. 실패/골드부족/미소유 분기에서는 부르지 않는다(총합이 0이라 점수를 덮어써 버림).
 - 🚧 **리빌드** — 기동 시 `SELECT owner_id, SUM(power) GROUP BY`로 전체 적재
-- 🚧 **훅 2개** — 강화 성공 시, 검 드랍 시
 - 🚧 **`/rank`** — top 10 + 내 순위
+- 🚧 **write-behind 배칭** — 샤드별 dirty map에 모아 주기 flush. 절대값이라 같은 유저의 갱신이 마지막 값 하나로 자연히 합쳐진다(증분이면 불가). 지금 쓰기 빈도로는 불필요
 
 ### 설계 노트 — 점수는 절대값으로
 
