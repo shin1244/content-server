@@ -7,6 +7,7 @@
 #include "Database.h"
 #include <iostream>
 #include "ShardServer.h"
+#include <sw/redis++/redis++.h>
 
 int main()
 {
@@ -21,6 +22,19 @@ int main()
     if (!redisEnv) {
         std::cerr << "[Error] SERVER_REDIS_URL 환경변수가 설정되지 않았습니다.\n";
         return 1;
+    }
+
+    try {
+        sw::redis::Redis redis(redisEnv);
+        std::cout << "Redis connected!\n";
+        redis.set("test", "hello");
+        auto value = redis.get("test");
+
+        if (value) { std::cout << "test = " << *value << '\n'; }
+        else { std::cout << "test not found\n"; }
+    }
+    catch (const sw::redis::Error& e) {
+        std::cerr << "[Redis Error] " << e.what() << '\n'; return 1;
     }
 
     SessionManager sessions;
