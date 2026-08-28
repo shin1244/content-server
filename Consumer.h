@@ -4,12 +4,14 @@
 #include "PacketHandler.h"
 #include "Protocol.h" 
 #include "Database.h"
+#include "Ranking.h"
 #include <random>
 
 class Consumer
 {
 public:
-    void Start(MPMCQueue<Packet>* queue, SessionManager* sessions, Database* db);
+    void Start(MPMCQueue<Packet>* queue, SessionManager* sessions, 
+        Database* db, Ranking* ranking);
     void Stop();
 
 private:
@@ -36,6 +38,7 @@ private:
 
     void RewardChat(uint64_t sessionId);
 
+    Ranking* ranking_;
     Database* db_ = nullptr;
     MPMCQueue<Packet>* queue_ = nullptr;
     SessionManager* session_manager_ = nullptr;

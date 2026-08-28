@@ -1,11 +1,13 @@
 #include "Consumer.h"
 #include <iostream>
 
-void Consumer::Start(MPMCQueue<Packet>* queue, SessionManager* sessions, Database* db)
+void Consumer::Start(MPMCQueue<Packet>* queue, SessionManager* sessions,
+    Database* db, Ranking* ranking)
 {
     queue_ = queue;
     session_manager_ = sessions;
-    db_ = db; 
+    db_ = db;
+    ranking_ = ranking;
 
     thread_ = std::thread([this] { Loop(); });
 }
@@ -356,6 +358,7 @@ void Consumer::HandleEnhance(uint64_t senderId, std::istringstream& iss)
                 + "  power=" + std::to_string(r.power)
                 + "  gold=" + std::to_string(r.gold)
                 + "  total=" + std::to_string(r.totalPower));
+            ranking_->Update(userId, r.totalPower);
             break;
 
         case EnhanceResult::Status::Failed:
@@ -399,6 +402,7 @@ void Consumer::RewardChat(uint64_t sessionId)
         // 1/50 아이템 드랍
         if (std::uniform_int_distribution<int>(1, 50)(rng) == 1) {
             DropResult item = db_->DropItem(userId);
+            ranking_->Update(userId, item.totalPower);
             SendError(sessionId, "item dropped! id=" + std::to_string(item.itemId)
             + " total power=" + std::to_string(item.totalPower));
         }

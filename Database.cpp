@@ -1,5 +1,6 @@
 #include "Database.h"
 #include <iostream>
+#include "Ranking.h"
 
 Database::Database(const std::string& connString)
     : conn_(connString)

@@ -7,7 +7,7 @@
 #include "Database.h"
 #include <iostream>
 #include "ShardServer.h"
-#include <sw/redis++/redis++.h>
+#include "Ranking.h"
 
 int main()
 {
@@ -23,25 +23,16 @@ int main()
         std::cerr << "[Error] SERVER_REDIS_URL 환경변수가 설정되지 않았습니다.\n";
         return 1;
     }
-
-    try {
-        sw::redis::Redis redis(redisEnv);
-        std::cout << "Redis connected!\n";
-        redis.set("test", "hello");
-        auto value = redis.get("test");
-
-        if (value) { std::cout << "test = " << *value << '\n'; }
-        else { std::cout << "test not found\n"; }
+    Ranking ranking(redisEnv, 8);
+    if (!ranking.Ping()) {
+        std::cerr << "[Error] Redis 연결 실패\n";
+        return 1;
     }
-    catch (const sw::redis::Error& e) {
-        std::cerr << "[Redis Error] " << e.what() << '\n'; return 1;
-    }
-
     SessionManager sessions;
     NetworkCore core(&sessions);
     ShardServer shards;
 
-    shards.Start(8, dsnEnv, &sessions);
+    shards.Start(8, dsnEnv, &ranking, &sessions);
     core.Start(5050);
 
     std::cout << "[Server] Press Enter to shutdown...\n";
