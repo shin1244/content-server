@@ -18,3 +18,7 @@ void Ranking::Update(uint64_t userId, int64_t totalPower)
             << e.what() << "\n";
     }
 }
+
+void Ranking::Rebuild(const std::vector<RankEntry>& all)
+{
+}

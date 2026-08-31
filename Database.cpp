@@ -1,6 +1,5 @@
 #include "Database.h"
 #include <iostream>
-#include "Ranking.h"
 
 Database::Database(const std::string& connString)
     : conn_(connString)
@@ -205,7 +204,7 @@ uint64_t Database::AddGold(uint64_t userId, uint64_t amount)
     return r[0].as<uint64_t>();
 }
 
-DropResult Database::DropItem(uint64_t userId)
+RankEntry Database::DropItem(uint64_t userId)
 {
     pqxx::work tx(conn_);
     pqxx::row r = tx.exec(
@@ -291,3 +290,18 @@ EnhanceResult Database::EnhanceItem(uint64_t userId, uint64_t itemId,
         t[0].as<uint64_t>()
     };
 }
+
+std::vector<RankEntry> Database::GetAllPower()
+{
+    pqxx::work tx(conn_);
+    pqxx::result r = tx.exec(
+        "SELECT owner_id, SUM(power) FROM items GROUP BY owner_id");
+    tx.commit();
+
+    std::vector<RankEntry> out;
+    out.reserve(r.size());
+    for (const auto& row : r)
+        out.push_back({ row[0].as<uint64_t>(), row[1].as<uint64_t>() });
+    return out;
+}
+

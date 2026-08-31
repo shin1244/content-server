@@ -2,14 +2,13 @@
 #include <string>
 #include <cstdint>
 #include <pqxx/pqxx>
+#include "Types.h"
 
 struct Item {
     uint64_t itemId;
     int enhanceLevel;
     int power;
 };
-
-struct DropResult { uint64_t itemId; uint64_t totalPower; };
 
 struct EnhanceResult
 {
@@ -44,11 +43,13 @@ public:
 
     uint64_t GetGold(uint64_t userId);
     uint64_t AddGold(uint64_t userId, uint64_t amount);
-    DropResult DropItem(uint64_t userId);
+    RankEntry DropItem(uint64_t userId);
     std::vector<Item> GetItems(uint64_t userId);
     std::optional<Item> GetItem(uint64_t userId, uint64_t itemId);
     EnhanceResult EnhanceItem(uint64_t userId, uint64_t itemId,
         uint64_t cost, bool success, double mult);
+
+    std::vector<RankEntry> GetAllPower();
 
 private:
     pqxx::connection conn_;
