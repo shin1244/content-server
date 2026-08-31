@@ -14,6 +14,9 @@ void Session::Init(SOCKET socket, int index, int id, MPMCQueue<Packet>* h)
     sendBuffer_.Clear();
     handler_ = h;
     friendIds_.clear();
+
+    userId_ = 0;
+    name_.clear();
 }
 
 void Session::Close()
