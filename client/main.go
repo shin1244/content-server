@@ -139,7 +139,7 @@ func recvLoop(conn net.Conn, ui *ChatUI) {
 
 		// 일반 채팅: id 로 닉네임을 찾아서 표시 (없으면 숫자 폴백)
 		name := ui.nameFor(id)
-		ui.addMessage(fmt.Sprintf("[%s] %s", name, string(payload)))
+		ui.addChat(fmt.Sprintf("[%s] %s", name, string(payload)))
 	}
 }
 
@@ -374,12 +374,26 @@ func (ui *ChatUI) getFilteredCommands() []Command {
 // Message
 // ============================================================
 
+// addMessage 는 서버가 보낸 시스템 메시지(id==0)를 추가한다.
+// 키워드로 색을 고르는 건 시스템 메시지에만 적용한다.
 func (ui *ChatUI) addMessage(raw string) {
+	ui.appendLines(raw, classify)
+}
+
+// addChat 은 다른 유저의 채팅(id!=0)을 추가한다.
+// 채팅 본문은 유저가 친 자유 텍스트라 키워드로 색을 고르면 안 된다.
+// (예: "gold 좀 주세요" 가 인벤토리 메시지처럼 초록으로 보이는 문제)
+func (ui *ChatUI) addChat(raw string) {
+	ui.appendLines(raw, func(string) tcell.Style { return styleDefault })
+}
+
+// appendLines 는 메시지를 줄 단위로 쪼개 styleFor 가 정한 색으로 넣는다.
+func (ui *ChatUI) appendLines(raw string, styleFor func(string) tcell.Style) {
 	ui.mu.Lock()
 	raw = strings.TrimRight(raw, "\n")
 	for _, line := range strings.Split(raw, "\n") {
 		line = strings.TrimRight(line, "\r")
-		ui.messages = append(ui.messages, message{text: line, style: classify(line)})
+		ui.messages = append(ui.messages, message{text: line, style: styleFor(line)})
 	}
 	ui.mu.Unlock()
 
