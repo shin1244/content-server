@@ -401,9 +401,9 @@ void Consumer::RewardChat(uint64_t sessionId)
 
         // 1/50 아이템 드랍
         if (std::uniform_int_distribution<int>(1, 50)(rng) == 1) {
-            RankEntry item = db_->DropItem(userId);
+            DropResult item = db_->DropItem(userId);
             ranking_->Update(userId, item.totalPower);
-            SendError(sessionId, "item dropped! id=" + std::to_string(item.userId)
+            SendError(sessionId, "item dropped! id=" + std::to_string(item.itemId)
             + " total power=" + std::to_string(item.totalPower));
         }
     }

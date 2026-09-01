@@ -8,7 +8,7 @@ bool Ranking::Ping()
     return redis_.ping() == "PONG";
 }
 
-void Ranking::Update(uint64_t userId, int64_t totalPower)
+void Ranking::Update(uint64_t userId, uint64_t totalPower)
 {
     try {
         redis_.zadd(KEY, std::to_string(userId), static_cast<double>(totalPower));
@@ -21,8 +21,6 @@ void Ranking::Update(uint64_t userId, int64_t totalPower)
 
 void Ranking::Rebuild(const std::vector<RankEntry>& all)
 {
-    const std::string tmpKey = std::string(KEY) + ":rebuild";
-
     try {
         redis_.del(KEY);
 

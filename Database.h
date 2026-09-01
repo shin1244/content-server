@@ -43,7 +43,7 @@ public:
 
     uint64_t GetGold(uint64_t userId);
     uint64_t AddGold(uint64_t userId, uint64_t amount);
-    RankEntry DropItem(uint64_t userId);
+    DropResult DropItem(uint64_t userId);
     std::vector<Item> GetItems(uint64_t userId);
     std::optional<Item> GetItem(uint64_t userId, uint64_t itemId);
     EnhanceResult EnhanceItem(uint64_t userId, uint64_t itemId,

@@ -204,7 +204,7 @@ uint64_t Database::AddGold(uint64_t userId, uint64_t amount)
     return r[0].as<uint64_t>();
 }
 
-RankEntry Database::DropItem(uint64_t userId)
+DropResult Database::DropItem(uint64_t userId)
 {
     pqxx::work tx(conn_);
     pqxx::row r = tx.exec(

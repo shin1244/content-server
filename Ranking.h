@@ -11,7 +11,7 @@ class Ranking
 public:
 	Ranking(const std::string& uri, size_t poolSize);
 	bool Ping();
-	void Update(uint64_t userId, int64_t totalPower);
+	void Update(uint64_t userId, uint64_t totalPower);
 	void Rebuild(const std::vector<RankEntry>& all);
 
 private:
