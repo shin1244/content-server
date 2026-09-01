@@ -28,6 +28,16 @@ int main()
         std::cerr << "[Error] Redis 연결 실패\n";
         return 1;
     }
+
+    try {
+        Database bootDb(dsnEnv);
+        ranking.Rebuild(bootDb.GetAllPower());
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[Boot] 랭킹 재구축 실패: " << e.what() << "\n";
+        return 1;
+    }
+
     SessionManager sessions;
     NetworkCore core(&sessions);
     ShardServer shards;

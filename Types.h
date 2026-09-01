@@ -4,5 +4,5 @@
 struct RankEntry
 {
     uint64_t userId;
-    uint64_t  totalPower;
+    uint64_t totalPower;
 };
