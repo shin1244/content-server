@@ -393,6 +393,22 @@ void Consumer::HandleEnhance(uint64_t senderId, std::istringstream& iss)
 
 void Consumer::HandleRanking(uint64_t senderId, std::istringstream& iss)
 {
+    std::string sub;
+    iss >> sub;
+
+    if (sub.empty())       ShowRanker(senderId);        // /r
+    else if (sub == "me")  ShowMyRank(senderId);        // /r me
+    else SendError(senderId, "usage: /r | /r me");
+}
+
+void Consumer::ShowRanker(uint64_t senderId)
+{
+
+}
+
+void Consumer::ShowMyRank(uint64_t senderId)
+{
+
 }
 
 

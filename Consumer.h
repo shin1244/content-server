@@ -34,6 +34,8 @@ private:
     void HandleEnhance(uint64_t senderId, std::istringstream& iss);
 
     void HandleRanking(uint64_t senderId, std::istringstream& iss);
+    void ShowRanker(uint64_t senderId);
+    void ShowMyRank(uint64_t senderId);
 
     void SendPacket(uint64_t sessionId, const Packet& pkt);
     void SendError(uint64_t sessionId, const std::string& msg);
