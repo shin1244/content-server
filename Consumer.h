@@ -33,6 +33,8 @@ private:
     void ShowInventory(uint64_t senderId);
     void HandleEnhance(uint64_t senderId, std::istringstream& iss);
 
+    void HandleRanking(uint64_t senderId, std::istringstream& iss);
+
     void SendPacket(uint64_t sessionId, const Packet& pkt);
     void SendError(uint64_t sessionId, const std::string& msg);
 

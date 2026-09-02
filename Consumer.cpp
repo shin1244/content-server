@@ -65,7 +65,12 @@ void Consumer::Handle(Packet& pkt)
     if (cmd == "/w")        HandleWhisper(sessionId, iss);
     else if (cmd == "/f")   HandleFriend(sessionId, iss);
     else if (cmd == "/i")   HandleInventory(sessionId, iss);
+    else if (cmd == "/r")   HandleRanking(sessionId, iss);
 }
+
+// -------------------------------------
+//              닉네임 설정
+// -------------------------------------
 
 void Consumer::HandleNick(uint64_t sessionId, std::istringstream& iss)
 {
@@ -108,6 +113,10 @@ void Consumer::HandleNick(uint64_t sessionId, std::istringstream& iss)
     session_manager_->Broadcast(reinterpret_cast<char*>(&a), a.header.size);
 }
 
+// -------------------------------------
+//             귓속말 기능
+// -------------------------------------
+
 void Consumer::HandleWhisper(uint64_t senderId, std::istringstream& iss)
 {
     uint64_t targetId = 0;
@@ -125,6 +134,10 @@ void Consumer::HandleWhisper(uint64_t senderId, std::istringstream& iss)
         SendPacket(senderId, out);
     }
 }
+
+// -------------------------------------
+//              친구 기능
+// -------------------------------------
 
 void Consumer::HandleFriend(uint64_t senderId, std::istringstream& iss)
 {
@@ -283,6 +296,10 @@ void Consumer::HandleFriendBroadcast(uint64_t senderId, const std::string& msg)
     SendPacket(senderId, out);
 }
 
+// -------------------------------------
+//            인벤토리 기능
+// -------------------------------------
+
 void Consumer::HandleInventory(uint64_t senderId, std::istringstream& iss)
 {
     std::string sub;
@@ -372,6 +389,10 @@ void Consumer::HandleEnhance(uint64_t senderId, std::istringstream& iss)
         std::cerr << "[DB] enhance failed: " << e.what() << "\n";
         SendError(senderId, "server error");
     }
+}
+
+void Consumer::HandleRanking(uint64_t senderId, std::istringstream& iss)
+{
 }
 
 
