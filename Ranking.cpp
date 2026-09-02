@@ -37,3 +37,20 @@ void Ranking::Rebuild(const std::vector<RankEntry>& all)
         std::cerr << "[Redis] rebuild failed: " << e.what() << "\n";
     }
 }
+
+std::vector<RankEntry> Ranking::Top(int64_t start, int64_t stop)
+{
+    std::vector<RankEntry> out;
+    try {
+        std::vector<std::pair<std::string, double>> buf;
+        redis_.zrevrange(KEY, start, stop, std::back_inserter(buf));
+        out.reserve(buf.size());
+        for (const auto& [member, score] : buf)
+            out.push_back({ std::stoull(member), static_cast<uint64_t>(score) });
+    }
+    catch (const std::exception& e)  {
+        std::cerr << "[Redis] top failed: " << e.what() << "\n";
+    }
+    return out;
+}
+

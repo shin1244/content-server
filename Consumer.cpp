@@ -403,7 +403,7 @@ void Consumer::HandleRanking(uint64_t senderId, std::istringstream& iss)
 
 void Consumer::ShowRanker(uint64_t senderId)
 {
-
+    ranking_.
 }
 
 void Consumer::ShowMyRank(uint64_t senderId)
