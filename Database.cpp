@@ -304,7 +304,9 @@ std::vector<RankEntry> Database::GetAllPower()
     std::vector<RankEntry> out;
     out.reserve(r.size());
     for (const auto& row : r)
-        out.push_back({ row[0].as<uint64_t>(), row[1].as<uint64_t>() });
+        out.push_back({ row[0].as<uint64_t>(),
+                        row[1].as<uint64_t>(),
+                        row[2].as<std::string>() });
     return out;
 }
 

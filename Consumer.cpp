@@ -103,6 +103,7 @@ void Consumer::HandleNick(uint64_t sessionId, std::istringstream& iss)
     }
 
     session_manager_->SetUserId(sessionId, userId);
+    ranking_->SetName(userId, name);          // 순위표에 보일 이름 갱신
     auto friendIds = db_->GetFriendIds(userId);           
     session_manager_->LoadFriendCache(userId, friendIds);
 
