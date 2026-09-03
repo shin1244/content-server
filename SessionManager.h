@@ -29,6 +29,7 @@ public:
     void SendToFriends(uint64_t userId, const char* data, int len);
     bool IsNamed(uint64_t id);
     bool SetName(uint64_t id, std::string name);
+    std::string GetName(uint64_t id);
     void SendRosterTo(uint64_t id);
 
     void LoadFriendCache(uint64_t userId, const std::vector<uint64_t>& ids);

@@ -403,7 +403,30 @@ void Consumer::HandleRanking(uint64_t senderId, std::istringstream& iss)
 
 void Consumer::ShowRanker(uint64_t senderId)
 {
-    ranking_.
+    std::vector<RankEntry> topRank = ranking_->Top(0, 19);
+
+    if (topRank.empty()) {
+        SendError(senderId, "rank is empty");
+        return;
+    }
+
+    constexpr size_t MAX_BODY = sizeof(Packet::message);
+
+    std::string body = "-- top 20 --\n";
+    for (size_t i = 0; i < topRank.size(); ++i) {
+        const auto& r = topRank[i];
+        std::string line = std::to_string(i + 1) + ". "
+            + (r.name.empty() ? "unknown" : r.name)
+            + "  power=" + std::to_string(r.totalPower) + "\n";
+
+        if (body.size() + line.size() > MAX_BODY) {
+            SendError(senderId, body);
+            body.clear();
+        }
+        body += line;
+    }
+
+    if (!body.empty()) SendError(senderId, body);
 }
 
 void Consumer::ShowMyRank(uint64_t senderId)

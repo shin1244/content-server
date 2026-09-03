@@ -295,7 +295,10 @@ std::vector<RankEntry> Database::GetAllPower()
 {
     pqxx::work tx(conn_);
     pqxx::result r = tx.exec(
-        "SELECT owner_id, SUM(power) FROM items GROUP BY owner_id");
+        "SELECT i.owner_id, SUM(i.power), u.user_name "
+        "  FROM items i JOIN users u ON u.user_id = i.owner_id "
+        " GROUP BY i.owner_id, u.user_name"
+    );
     tx.commit();
 
     std::vector<RankEntry> out;

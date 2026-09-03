@@ -16,7 +16,10 @@ public:
 	std::vector<RankEntry> Top(int64_t start, int64_t stop);
 	std::optional<int64_t> RankOf(uint64_t userId);
 
+	std::vector<std::string> GetNames(const std::vector<uint64_t>& userIds);
+
 private:
 	static constexpr const char* KEY = "lb:power";
+	static constexpr const char* NAME_KEY = "user:name";
 	sw::redis::Redis redis_;
 };
