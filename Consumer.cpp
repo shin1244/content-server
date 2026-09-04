@@ -25,7 +25,14 @@ void Consumer::Loop()
     Packet pkt;
     while (queue_->Pop(pkt))
     {
-        Handle(pkt);
+        // 예외가 스레드 함수를 탈출하면 std::terminate -> 프로세스 전체가 죽는다.
+        // 패킷 하나 때문에 샤드를 잃지 않도록 여기서 막는다.
+        try {
+            Handle(pkt);
+        }
+        catch (const std::exception& e) {
+            std::cerr << "[Consumer] unhandled: " << e.what() << "\n";
+        }
     }
 }
 

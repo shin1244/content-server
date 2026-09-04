@@ -22,6 +22,12 @@ void Ranking::Update(uint64_t userId, uint64_t totalPower)
 void Ranking::Rebuild(const std::vector<RankEntry>& all)
 {
     try {
+        if (all.empty()) {                      // 인자 0개면 ZADD/HMSET이 에러
+            redis_.del(KEY);
+            redis_.del(NAME_KEY);
+            return;
+        }
+
         auto pipe = redis_.pipeline();
         pipe.del(KEY).del(NAME_KEY);
 
@@ -76,12 +82,15 @@ std::vector<RankEntry> Ranking::Top(int64_t start, int64_t stop)
     return out;
 }
 
-void Ranking::SetName(uint64_t userId, std::string name) {
-    std::pair<std::string, std::string>  p;
-    p.first = std::to_string(userId);
-    p.second = name;
-
-    redis_.hset(NAME_KEY, p);
+void Ranking::SetName(uint64_t userId, const std::string& name)
+{
+    try {
+        redis_.hset(NAME_KEY, std::to_string(userId), name);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[Redis] setname failed (user " << userId << "): "
+            << e.what() << "\n";
+    }
 }
 
 std::vector<std::string> Ranking::GetNames(const std::vector<uint64_t>& userIds)
