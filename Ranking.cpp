@@ -76,6 +76,14 @@ std::vector<RankEntry> Ranking::Top(int64_t start, int64_t stop)
     return out;
 }
 
+void Ranking::SetName(uint64_t userId, std::string name) {
+    std::pair<std::string, std::string>  p;
+    p.first = std::to_string(userId);
+    p.second = name;
+
+    redis_.hset(NAME_KEY, p);
+}
+
 std::vector<std::string> Ranking::GetNames(const std::vector<uint64_t>& userIds)
 {
     if (userIds.empty()) return {};
@@ -112,8 +120,17 @@ std::vector<std::string> Ranking::GetNames(const std::vector<uint64_t>& userIds)
 
     return {};
 }
-//std::optional<int64_t> Ranking::RankOf(uint64_t userId)
-//{
-//    return std::optional<int64_t>();
-//}
-//
+
+std::optional<int64_t> Ranking::RankOf(uint64_t userId)
+{
+    try {
+        auto rank = redis_.zrevrank(KEY, std::to_string(userId));
+        if (rank) return static_cast<int64_t>(*rank);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[Redis] rankof failed (user " << userId << "): "
+            << e.what() << "\n";
+    }
+    return std::nullopt;
+}
+

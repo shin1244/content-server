@@ -1,5 +1,7 @@
 #include "Consumer.h"
 #include <iostream>
+#include <optional>
+#include <algorithm>
 
 void Consumer::Start(MPMCQueue<Packet>* queue, SessionManager* sessions,
     Database* db, Ranking* ranking)
@@ -432,7 +434,39 @@ void Consumer::ShowRanker(uint64_t senderId)
 
 void Consumer::ShowMyRank(uint64_t senderId)
 {
+    // RankOf는 userId를 받는다. senderId는 세션 id라 변환이 필요
+    uint64_t userId = session_manager_->GetUserId(senderId);
 
+    std::optional<int64_t> myRank = ranking_->RankOf(userId);
+    if (!myRank) {
+        SendError(senderId, "not ranked yet");
+        return;
+    }
+
+    constexpr int64_t SPAN = 5;
+    int64_t start = std::max<int64_t>(0, *myRank - SPAN);
+    std::vector<RankEntry> around = ranking_->Top(start, *myRank + SPAN);
+
+    constexpr size_t MAX_BODY = sizeof(Packet::message);
+
+    std::string body = "-- my rank: " + std::to_string(*myRank + 1) + " --\n";
+    for (size_t i = 0; i < around.size(); ++i) {
+        int64_t rank = start + static_cast<int64_t>(i);
+        const auto& e = around[i];
+
+        std::string line = (rank == *myRank ? "> " : "  ")
+            + std::to_string(rank + 1) + ". "  
+            + (e.name.empty() ? "unknown" : e.name)
+            + "  power=" + std::to_string(e.totalPower) + "\n";
+
+        if (body.size() + line.size() > MAX_BODY) {
+            SendError(senderId, body);
+            body.clear();
+        }
+        body += line;
+    }
+
+    if (!body.empty()) SendError(senderId, body);
 }
 
 

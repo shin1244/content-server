@@ -16,6 +16,7 @@ public:
 	std::vector<RankEntry> Top(int64_t start, int64_t stop);
 	std::optional<int64_t> RankOf(uint64_t userId);
 
+	void SetName(uint64_t userId, std::string name);
 	std::vector<std::string> GetNames(const std::vector<uint64_t>& userIds);
 
 private:
