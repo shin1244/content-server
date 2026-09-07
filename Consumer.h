@@ -32,6 +32,7 @@ private:
     void HandleInventory(uint64_t senderId, std::istringstream& iss);
     void ShowInventory(uint64_t senderId);
     void HandleEnhance(uint64_t senderId, std::istringstream& iss);
+    void HandleTrade(uint64_t senderId, std::istringstream& iss);
 
     void HandleRanking(uint64_t senderId, std::istringstream& iss);
     void ShowRanker(uint64_t senderId);

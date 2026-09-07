@@ -25,8 +25,6 @@ void Consumer::Loop()
     Packet pkt;
     while (queue_->Pop(pkt))
     {
-        // 예외가 스레드 함수를 탈출하면 std::terminate -> 프로세스 전체가 죽는다.
-        // 패킷 하나 때문에 샤드를 잃지 않도록 여기서 막는다.
         try {
             Handle(pkt);
         }
@@ -317,6 +315,7 @@ void Consumer::HandleInventory(uint64_t senderId, std::istringstream& iss)
 
     if (sub.empty())        ShowInventory(senderId);        // /i
     else if (sub == "enh")  HandleEnhance(senderId, iss);   // /i enh <id>
+    else if (sub == "t")    HandleTrade(senderId, iss);
     else SendError(senderId, "usage: /i | /i enh <itemId>");
 }
 
@@ -399,6 +398,13 @@ void Consumer::HandleEnhance(uint64_t senderId, std::istringstream& iss)
         std::cerr << "[DB] enhance failed: " << e.what() << "\n";
         SendError(senderId, "server error");
     }
+}
+
+void Consumer::HandleTrade(uint64_t senderId, std::istringstream& iss)
+{
+    uint64_t name = 0;
+    if (!(iss >> name)) { SendError(senderId, "usage: /i t <name>"); return; }
+
 }
 
 void Consumer::HandleRanking(uint64_t senderId, std::istringstream& iss)
