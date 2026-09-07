@@ -73,6 +73,7 @@ void Consumer::Handle(Packet& pkt)
     else if (cmd == "/f")   HandleFriend(sessionId, iss);
     else if (cmd == "/i")   HandleInventory(sessionId, iss);
     else if (cmd == "/r")   HandleRanking(sessionId, iss);
+    else if (cmd == "/t")   HandleTrade(sessionId, iss);
 }
 
 // -------------------------------------
@@ -403,7 +404,7 @@ void Consumer::HandleEnhance(uint64_t senderId, std::istringstream& iss)
 void Consumer::HandleTrade(uint64_t senderId, std::istringstream& iss)
 {
     uint64_t name = 0;
-    if (!(iss >> name)) { SendError(senderId, "usage: /i t <name>"); return; }
+    if (!(iss >> name)) { SendError(senderId, "usage: /t <name>"); return; }
 
 }
 

@@ -11,6 +11,8 @@ struct Packet
 };
 #pragma pack(pop)
 
+enum class MsgSrc : uint8_t { Client, Internal };
+
 inline Packet MakePacket(unsigned short id, const std::string& msg)
 {
     Packet pkt{};
@@ -20,3 +22,10 @@ inline Packet MakePacket(unsigned short id, const std::string& msg)
     pkt.header.size = static_cast<unsigned short>(HEADER_SIZE + copyLen);
     return pkt;
 }
+
+struct ShardMsg
+{
+    MsgSrc   src = MsgSrc::Client;
+    uint64_t sessionId = 0;   
+    Packet   pkt{};           
+};
