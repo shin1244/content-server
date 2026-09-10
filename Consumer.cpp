@@ -36,7 +36,7 @@ void Consumer::Loop()
 
 void Consumer::Handle(ShardMsg& msg)
 {
-    Packet pkt = msg.pkt;
+    Packet& pkt = msg.pkt;
     const uint64_t sessionId = pkt.header.id;
     const int len = pkt.header.size;
     std::string text(pkt.message, len - HEADER_SIZE);
@@ -317,7 +317,6 @@ void Consumer::HandleInventory(uint64_t senderId, std::istringstream& iss)
 
     if (sub.empty())        ShowInventory(senderId);        // /i
     else if (sub == "enh")  HandleEnhance(senderId, iss);   // /i enh <id>
-    else if (sub == "t")    HandleTrade(senderId, iss);
     else SendError(senderId, "usage: /i | /i enh <itemId>");
 }
 
