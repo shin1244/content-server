@@ -1,7 +1,7 @@
 #pragma once
 #include <thread>
+#include "SessionManager.h"
 #include "MPMCQueue.h"
-#include "PacketHandler.h"
 #include "Protocol.h" 
 #include "Database.h"
 #include "Ranking.h"
@@ -10,13 +10,13 @@
 class Consumer
 {
 public:
-    void Start(MPMCQueue<Packet>* queue, SessionManager* sessions, 
+    void Start(MPMCQueue<ShardMsg>* queue, SessionManager* sessions,
         Database* db, Ranking* ranking);
     void Stop();
 
 private:
     void Loop();
-    void Handle(Packet& pkt);
+    void Handle(ShardMsg& pkt);
 
     void HandleNick(uint64_t sessionId, std::istringstream& iss);
     void HandleWhisper(uint64_t senderId, std::istringstream& iss);
@@ -45,7 +45,7 @@ private:
 
     Ranking* ranking_;
     Database* db_ = nullptr;
-    MPMCQueue<Packet>* queue_ = nullptr;
+    MPMCQueue<ShardMsg>* queue_ = nullptr;
     SessionManager* session_manager_ = nullptr;
     std::thread thread_;
 };

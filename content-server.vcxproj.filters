@@ -30,16 +30,10 @@
     <ClCompile Include="SessionManager.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="PacketHandler.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="Consumer.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="Database.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="ShardServer.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="Ranking.cpp">
@@ -69,15 +63,6 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="SessionManager.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="IPacketHandler.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="QueueSink.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="PacketHandler.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="Consumer.h">

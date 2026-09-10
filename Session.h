@@ -6,14 +6,13 @@
 #include "RingBuffer.h"
 #include "Protocol.h"
 #include "NetTypes.h"
-#include "IPacketHandler.h"
 #include "MPMCQueue.h"
 
 
 class Session
 {
 public:
-    void Init(SOCKET socket, int index, int id, MPMCQueue<Packet>* h);
+    void Init(SOCKET socket, int index, int id, MPMCQueue<ShardMsg>* h);
     void Close();
 
     void PostRecv();
@@ -65,5 +64,5 @@ private:
     RecvContext recvContext_;
     SendContext sendContext_;
 
-    MPMCQueue<Packet>* handler_ = nullptr;
+    MPMCQueue<ShardMsg>* handler_ = nullptr;
 };

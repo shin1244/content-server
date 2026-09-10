@@ -8,7 +8,7 @@ Session* SessionManager::Create(SOCKET sock)
 	Session* s = &pool_[index];
 	uint64_t id = nextId_.fetch_add(1);
 
-	MPMCQueue<Packet>* q = shardQueues_[id % shardQueues_.size()].get();
+	MPMCQueue<ShardMsg>* q = shardQueues_[id % shardQueues_.size()].get();
 	s->Init(sock, index, id, q);
 
 	byId_[id] = s;
@@ -18,7 +18,7 @@ Session* SessionManager::Create(SOCKET sock)
 void SessionManager::InitShards(size_t n)
 {
 	for (size_t i = 0; i < n; ++i)
-		shardQueues_.push_back(std::make_unique<MPMCQueue<Packet>>());
+		shardQueues_.push_back(std::make_unique<MPMCQueue<ShardMsg>>());
 }
 
 void SessionManager::Destroy(Session* s)

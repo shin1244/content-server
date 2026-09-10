@@ -17,11 +17,11 @@ private:
     std::unordered_map<uint64_t, uint64_t> byUserId_;
     std::atomic<uint64_t> nextId_{1};
     ObjectPool<Session, 1000> pool_;
-    std::vector<std::unique_ptr<MPMCQueue<Packet>>> shardQueues_;
+    std::vector<std::unique_ptr<MPMCQueue<ShardMsg>>> shardQueues_;
 public:
     Session* Create(SOCKET sock);
     void InitShards(size_t n);
-    MPMCQueue<Packet>* GetQueue(size_t i) { return shardQueues_[i].get(); }
+    MPMCQueue<ShardMsg>* GetQueue(size_t i) { return shardQueues_[i].get(); }
     size_t ShardCount() const { return shardQueues_.size(); }
     void Destroy(Session* s);
     void Broadcast(char* data, int len);
@@ -29,7 +29,6 @@ public:
     void SendToFriends(uint64_t userId, const char* data, int len);
     bool IsNamed(uint64_t id);
     bool SetName(uint64_t id, std::string name);
-    std::string GetName(uint64_t id);
     void SendRosterTo(uint64_t id);
 
     void LoadFriendCache(uint64_t userId, const std::vector<uint64_t>& ids);

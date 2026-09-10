@@ -2,7 +2,6 @@
 
 #include "MPMCQueue.h"
 #include "NetworkCore.h"
-#include "PacketHandler.h"
 #include "Consumer.h"
 #include "Database.h"
 #include <iostream>

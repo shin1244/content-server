@@ -3,7 +3,7 @@
 #include <optional>
 #include <algorithm>
 
-void Consumer::Start(MPMCQueue<Packet>* queue, SessionManager* sessions,
+void Consumer::Start(MPMCQueue<ShardMsg>* queue, SessionManager* sessions,
     Database* db, Ranking* ranking)
 {
     queue_ = queue;
@@ -22,11 +22,11 @@ void Consumer::Stop()
 
 void Consumer::Loop()
 {
-    Packet pkt;
-    while (queue_->Pop(pkt))
+    ShardMsg msg;
+    while (queue_->Pop(msg))
     {
         try {
-            Handle(pkt);
+            Handle(msg);
         }
         catch (const std::exception& e) {
             std::cerr << "[Consumer] unhandled: " << e.what() << "\n";
@@ -34,8 +34,9 @@ void Consumer::Loop()
     }
 }
 
-void Consumer::Handle(Packet& pkt)
+void Consumer::Handle(ShardMsg& msg)
 {
+    Packet pkt = msg.pkt;
     const uint64_t sessionId = pkt.header.id;
     const int len = pkt.header.size;
     std::string text(pkt.message, len - HEADER_SIZE);

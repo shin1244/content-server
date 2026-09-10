@@ -131,24 +131,19 @@
     <ClCompile Include="Database.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="NetworkCore.cpp" />
-    <ClCompile Include="PacketHandler.cpp" />
     <ClCompile Include="Ranking.cpp" />
     <ClCompile Include="RingBuffer.cpp" />
     <ClCompile Include="Session.cpp" />
     <ClCompile Include="SessionManager.cpp" />
-    <ClCompile Include="ShardServer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Consumer.h" />
     <ClInclude Include="Database.h" />
-    <ClInclude Include="IPacketHandler.h" />
     <ClInclude Include="MPMCQueue.h" />
     <ClInclude Include="NetTypes.h" />
     <ClInclude Include="NetworkCore.h" />
     <ClInclude Include="ObjectPool.h" />
-    <ClInclude Include="PacketHandler.h" />
     <ClInclude Include="Protocol.h" />
-    <ClInclude Include="QueueSink.h" />
     <ClInclude Include="Ranking.h" />
     <ClInclude Include="RingBuffer.h" />
     <ClInclude Include="Session.h" />
