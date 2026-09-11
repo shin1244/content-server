@@ -43,6 +43,8 @@ private:
 
     void RewardChat(uint64_t sessionId);
 
+    void HandleInternal(ShardMsg& msg);
+
     Ranking* ranking_;
     Database* db_ = nullptr;
     MPMCQueue<ShardMsg>* queue_ = nullptr;

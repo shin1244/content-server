@@ -36,8 +36,9 @@ void Consumer::Loop()
 
 void Consumer::Handle(ShardMsg& msg)
 {
+    if (msg.type != MsgType::Client) { HandleInternal(msg); return; }
     Packet& pkt = msg.pkt;
-    const uint64_t sessionId = pkt.header.id;
+    const uint64_t sessionId = msg.sessionId;
     const int len = pkt.header.size;
     std::string text(pkt.message, len - HEADER_SIZE);
 
@@ -518,5 +519,23 @@ void Consumer::RewardChat(uint64_t sessionId)
     }
     catch (const std::exception& e) {
         std::cerr << "[DB] chat reward failed: " << e.what() << "\n";
+    }
+}
+
+void Consumer::HandleInternal(ShardMsg& msg)
+{
+    if (msg.type == MsgType::TradeDisconnect) { return; }
+
+    if (!session_manager_->IsNamed(msg.sessionId)) {
+        return;
+    }
+
+    switch (msg.type)
+    {
+    case MsgType::TradeRequest: break;
+    case MsgType::TradeAccept:  break;
+    case MsgType::TradeReject:  break;
+    case MsgType::TradeCancel:  break;
+    default: break;
     }
 }

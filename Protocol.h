@@ -11,7 +11,7 @@ struct Packet
 };
 #pragma pack(pop)
 
-enum class MsgSrc : uint8_t { Client, Internal };
+enum class MsgSrc : uint8_t { Client, TradeRequest };
 
 inline Packet MakePacket(unsigned short id, const std::string& msg)
 {
@@ -23,9 +23,20 @@ inline Packet MakePacket(unsigned short id, const std::string& msg)
     return pkt;
 }
 
+enum class MsgType : uint8_t
+{
+    Client,
+    TradeRequest,
+    TradeAccept,
+    TradeReject,
+    TradeCancel,
+    TradeDisconnect,
+};
+
 struct ShardMsg
 {
-    MsgSrc   src = MsgSrc::Client;
-    uint64_t sessionId = 0;   
-    Packet   pkt{};           
+    MsgType  type = MsgType::Client;
+    uint64_t sessionId = 0;
+    uint64_t fromSid = 0;       // 보낸 세션. Client일 땐 안 씀
+    Packet   pkt{};             // Client일 때만 사용
 };

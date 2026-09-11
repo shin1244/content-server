@@ -12,7 +12,7 @@
 class Session
 {
 public:
-    void Init(SOCKET socket, int index, int id, MPMCQueue<ShardMsg>* h);
+    void Init(SOCKET socket, int index, uint64_t id, MPMCQueue<ShardMsg>* h);
     void Close();
 
     void PostRecv();

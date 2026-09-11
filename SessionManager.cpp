@@ -167,3 +167,16 @@ uint64_t SessionManager::GetUserId(uint64_t sessionId)
 	if (it == byId_.end()) return 0;
 	return it->second->GetUserId();
 }
+
+uint64_t SessionManager::FindByName(const std::string& name)
+{
+	std::shared_lock g(lock_);
+	auto it = byName_.find(name);
+	return it == byName_.end() ? 0 : it->second;
+}
+
+void SessionManager::Post(uint64_t sid, ShardMsg msg)
+{
+	msg.sessionId = sid;
+	shardQueues_[sid % shardQueues_.size()]->Push(std::move(msg));
+}

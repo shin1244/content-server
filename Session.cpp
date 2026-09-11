@@ -2,7 +2,7 @@
 
 #include "MPMCQueue.h"
 
-void Session::Init(SOCKET socket, int index, int id, MPMCQueue<ShardMsg>* h)
+void Session::Init(SOCKET socket, int index, uint64_t id, MPMCQueue<ShardMsg>* h)
 {
     socket_ = socket;
     index_ = index;
@@ -86,7 +86,7 @@ void Session::OnRecv(int bytes)
         recvBuffer_.moveHead(header.size);
         pkt.header.id = id_;
 
-        handler_->Push(ShardMsg{ MsgSrc::Client, id_, pkt });
+        handler_->Push(ShardMsg{ .type = MsgType::Client, .sessionId = id_, .pkt = pkt });
     }
     PostRecv();
 }

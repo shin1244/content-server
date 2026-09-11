@@ -38,4 +38,8 @@ public:
 
     void SetUserId(uint64_t sessionId, uint64_t userId);
     uint64_t GetUserId(uint64_t sessionId);
+
+    uint64_t FindByName(const std::string& name);
+
+    void Post(uint64_t sid, ShardMsg msg);
 };
