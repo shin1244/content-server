@@ -404,9 +404,15 @@ void Consumer::HandleEnhance(uint64_t senderId, std::istringstream& iss)
 
 void Consumer::HandleTrade(uint64_t senderId, std::istringstream& iss)
 {
-    uint64_t name = 0;
-    if (!(iss >> name)) { SendError(senderId, "usage: /t <name>"); return; }
+    std::string command;
+    iss >> command;
 
+    uint64_t id = session_manager_->FindByName(command);
+
+    ShardMsg msg;
+    msg.type = MsgType::TradeRequest;
+    msg.fromSid = senderId;
+    session_manager_->Post(id, msg);
 }
 
 void Consumer::HandleRanking(uint64_t senderId, std::istringstream& iss)
@@ -524,7 +530,7 @@ void Consumer::RewardChat(uint64_t sessionId)
 
 void Consumer::HandleInternal(ShardMsg& msg)
 {
-    if (msg.type == MsgType::TradeDisconnect) { return; }
+    if (msg.type == MsgType::TradeDisconnect || msg.sessionId == msg.fromSid) { return; }
 
     if (!session_manager_->IsNamed(msg.sessionId)) {
         return;
@@ -532,7 +538,9 @@ void Consumer::HandleInternal(ShardMsg& msg)
 
     switch (msg.type)
     {
-    case MsgType::TradeRequest: break;
+    case MsgType::TradeRequest: 
+        std::cout << "hihi?\n";
+        break;
     case MsgType::TradeAccept:  break;
     case MsgType::TradeReject:  break;
     case MsgType::TradeCancel:  break;
